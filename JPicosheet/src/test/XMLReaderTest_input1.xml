@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<book name="myBook">
+	<sheet name="sheet1" precision="12" roundingMode="CEILING">
+		<cell name="cell1" type="str">myText</cell>
+		<cell name="cell2" type="num">1234.56</cell>
+		<cell name="cell3" type="num">100</cell>
+		<cell name="cell4" type="formula">=cell2+cell3</cell>
+		<cell name="cell5" type="date">2014/05/24 23:06:00</cell>
+		<cell name="mySummary">=sum(myGroup@)</cell>
+		<table name="newTable#" row="5" col="3">
+			<row num="1">
+				<col num="1" type="num">10</col>
+				<col num="2">20</col>
+				<col num="3">30</col>
+			</row>
+			<row num="2">
+				<col num="1" type="formula">=newTable#R1C1</col>
+				<col num="2">=newTable#R1C2</col>
+				<col num="3">=newTable#R1C3</col>
+			</row>
+			<row num="3">
+				<col num="1">=newTable#R2C1*12.5</col>
+				<col num="2">=newTable#R1C1+newTable#R1C2+newTable#R1C2</col>
+				<col num="3">=1+2+3+4+5+6+7+8+9+10</col>
+			</row>
+			<row num="4">
+				<col num="1">10</col>
+				<col num="2">10</col>
+				<col num="3">10</col>
+			</row>
+			<row num="5">
+				<col num="1">10</col>
+				<col num="2">10</col>
+				<col num="3">10</col>
+			</row>
+		</table>
+		<group name="myGroup@">
+			<cell name="cell1"/>
+			<cell name="cell4"/>
+			<cell name="newTable#R1C1"/>
+		</group>
+	</sheet>
+	<sheet name="sheet2" precision="12" roundingMode="FLOOR">
+		<cell name="cell1" type="str">日本語です</cell>
+		<cell name="cell2" type="num">1234.56</cell>
+		<cell name="cell3" type="num">100</cell>
+		<cell name="cell4" type="formula">=cell2-cell3</cell>
+		<table name="newTable2#" row="5" col="3">
+			<row num="1">
+				<col num="1">10</col>
+				<col num="2">20</col>
+			</row>
+			<row num="2">
+				<col num="2">10</col>
+				<col num="3">10</col>
+			</row>
+		</table>
+	</sheet>
+</book>

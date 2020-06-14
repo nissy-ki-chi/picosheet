@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<book name="myBook">
+<sheet name="sheet1" precision="12" roundingMode="CEILING">
+<cell name="cell1" type="str"><![CDATA[myText]]></cell>
+<cell name="cell2" type="num"><![CDATA[1234.56]]></cell>
+<cell name="cell3" type="num"><![CDATA[100]]></cell>
+<cell name="cell4" type="formula"><![CDATA[=cell2+cell3]]></cell>
+<cell name="cell5" type="date"><![CDATA[2014/05/24 23:06:00.0000]]></cell>
+<cell name="mySummary" type="formula"><![CDATA[=sum(myGroup@)]]></cell>
+<table col="3" name="newTable#" row="5">
+<row num="1">
+<col num="1" type="num"><![CDATA[20]]></col>
+<col num="2" type="num"><![CDATA[30]]></col>
+</row>
+<row num="2">
+<col num="1" type="formula"><![CDATA[=newTable#R1C2]]></col>
+<col num="2" type="formula"><![CDATA[=newTable#R1C3]]></col>
+</row>
+<row num="3">
+<col num="1" type="formula"><![CDATA[=newTable#R1C1+newTable#R1C2+newTable#R1C2]]></col>
+<col num="2" type="formula"><![CDATA[=1+2+3+4+5+6+7+8+9+10]]></col>
+</row>
+<row num="4">
+<col num="1" type="num"><![CDATA[10]]></col>
+<col num="2" type="num"><![CDATA[10]]></col>
+</row>
+</table>
+<group name="myGroup@">
+<cell name="cell4"/>
+<cell name="newTable#R1C1"/>
+<cell name="cell1"/>
+</group>
+</sheet>
+<sheet name="sheet2" precision="12" roundingMode="FLOOR">
+<cell name="cell1" type="str"><![CDATA[日本語です]]></cell>
+<cell name="cell2" type="num"><![CDATA[1234.56]]></cell>
+<cell name="cell3" type="num"><![CDATA[100]]></cell>
+<cell name="cell4" type="formula"><![CDATA[=cell2-cell3]]></cell>
+<table col="3" name="newTable2#" row="5">
+<row num="1">
+<col num="1" type="num"><![CDATA[20]]></col>
+</row>
+<row num="2">
+<col num="1" type="num"><![CDATA[10]]></col>
+<col num="2" type="num"><![CDATA[10]]></col>
+</row>
+</table>
+</sheet>
+</book>

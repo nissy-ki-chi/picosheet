@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * JPicosheet: Spreadsheet engine for Java Applications
+ * Copyright (C) 2011 yusuke nishikawa
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ */
+-->
+
+<project name="JPicosheet" basedir="." default="all">
+
+	<description>build JPicosheet JAR file</description>
+
+	<!-- Properties -->
+	<property name="projectName" value="JPicosheet"/>
+	<property name="version" value="0.1.4"/>
+	<property name="jarFileName" value="${projectName}-${version}.jar"/>
+
+	<property name="sourceDir" value="src"/>
+	<property name="binDir" value="bin"/>
+	<property name="jarDir" value="jarfile"/>
+	<property name="jarWorkDir" value="jarwork"/>
+	<property name="javadocDir" value="doc"/>
+	<property name="distDir" value="dist"/>
+
+
+	<target name="all" depends="init,makedir,copyJarFile,jar,javadoc,makeDist,makeDist-src,clean" />
+
+	<target name="init">
+		<tstamp></tstamp>
+		<delete dir="${jarWorkDir}"/>
+		<delete file="${jarDir}/${jarFileName}"/>
+		<delete file="${distDir}/${projectName}"/>
+	</target>
+
+	<target name="makedir">
+		<mkdir dir="${jarDir}"/>
+		<mkdir dir="${jarWorkDir}"/>
+		<mkdir dir="${distDir}"/>
+	</target>
+
+	<target name="copyJarFile" depends="makedir">
+		<copy  todir="${jarWorkDir}">
+			<fileset dir="${binDir}">
+			<include name="**/*.class"/>
+			<exclude name="test/**"/>
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="jar" depends="copyJarFile">
+		<jar destfile="${jarDir}/${jarFileName}">
+		<zipfileset dir="${jarWorkDir}" />
+		</jar>
+	</target>
+
+	<target name="javadoc" depends="makedir">
+		<delete dir="${javadocDir}"/>
+		<javadoc destdir="${javadocDir}"
+			encoding="UTF-8"
+			docencoding="UTF-8"
+			charset="UTF-8"
+			source="1.5"
+			author="true"
+			version="true"
+			access="public"
+			use="true"
+			nonavbar="false"
+			notree="true"
+			nodeprecated="false"
+			nodeprecatedlist="false"
+			noindex="false"
+			splitindex="true"
+			nohelp="true"
+		>
+			<link href="http://java.sun.com/j2se/1.5.0/ja/docs/ja/api/" />
+
+		<packageset dir="${sourceDir}" defaultexcludes="yes">
+			<include name="com/nissy_ki_chi/jpicosheet/*"/>
+			<exclude name="test/*"/>
+		</packageset>
+		</javadoc>
+	</target>
+
+	<target name="makeDist" depends="javadoc,jar">
+		<zip destfile="${distDir}/${projectName}${version}_${DSTAMP}.zip">
+			<zipfileset file="${jarDir}/${jarFileName}"/>
+			<zipfileset dir="${javadocDir}" prefix="javadoc"/>
+		</zip>
+	</target>
+
+	<target name="makeDist-src">
+		<zip destfile="${distDir}/${projectName}${version}-src_${DSTAMP}.zip">
+			<zipfileset dir="${sourceDir}"/>
+		</zip>
+	</target>
+
+	<target name="clean">
+		<delete dir="${jarWorkDir}"/>
+	</target>
+
+
+</project>
+

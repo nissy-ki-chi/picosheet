@@ -1,0 +1,48 @@
+@Book:name	myBook
+@sheet1:Name	sheet1
+@sheet1:MathContext	precision=12 roundingMode=CEILING
+sheet1!cell4	string\nwith\nreturn
+sheet1!cell3	=cell2*3.14
+sheet1!cell2	123
+sheet1!cell1	abcde
+@sheet1!cell1:Label	ラベルには日本語なども使用可能!?/ <>_+-*/^"
+@sheet1!newTable1#:Table	1,1
+sheet1!newTable1#R1C1	123
+@sheet1!newTable3#:Table	2,1
+sheet1!newTable3#R1C1	
+sheet1!newTable3#R2C1	22222
+@sheet1!newTable2#:Table	1,2
+sheet1!newTable2#R1C1	
+sheet1!newTable2#R1C2	11111
+@sheet1!newTable4#:Table	10,3
+sheet1!newTable4#R1C1	
+sheet1!newTable4#R1C2	
+sheet1!newTable4#R1C3	
+sheet1!newTable4#R2C1	
+sheet1!newTable4#R2C2	
+sheet1!newTable4#R2C3	
+sheet1!newTable4#R3C1	
+sheet1!newTable4#R3C2	
+sheet1!newTable4#R3C3	
+sheet1!newTable4#R4C1	
+sheet1!newTable4#R4C2	
+sheet1!newTable4#R4C3	
+sheet1!newTable4#R5C1	
+sheet1!newTable4#R5C2	
+sheet1!newTable4#R5C3	
+sheet1!newTable4#R6C1	
+sheet1!newTable4#R6C2	
+sheet1!newTable4#R6C3	
+sheet1!newTable4#R7C1	
+sheet1!newTable4#R7C2	
+sheet1!newTable4#R7C3	
+sheet1!newTable4#R8C1	
+sheet1!newTable4#R8C2	
+sheet1!newTable4#R8C3	
+sheet1!newTable4#R9C1	
+sheet1!newTable4#R9C2	
+sheet1!newTable4#R9C3	
+sheet1!newTable4#R10C1	
+sheet1!newTable4#R10C2	
+sheet1!newTable4#R10C3	33333
+@sheet1!hogeGroup@:Group	sheet1!cell2,sheet1!cell3,sheet1!cell1
