@@ -99,14 +99,15 @@ public class XMLWriter {
 				sheetElem.appendChild(tableElem);
 
 				// テーブルの行
-				for (int rowPos = 1; rowPos < rowSize; rowPos++) {
+				for (int rowPos = 1; rowPos <= rowSize; rowPos++) {
 					Element rowElem = null;
-					Cell[] cells = table.getRange(
+					Cell[] cellsInRow = table.getRange(
 							new StringBuilder("R").append(rowPos).append("Cx")
 									.toString()).getRowArray(1);
-					for (int colPos = 1; colPos < colSize; colPos++) {
+					for (int colPos = 1; colPos <= colSize; colPos++) {
+						int colIndex = colPos - 1;
 						// 空のセルは保存不要
-						if (cells[colPos].getCellType() == CellType.EMPTY) {
+						if (cellsInRow[colIndex].getCellType() == CellType.EMPTY) {
 							continue;
 						}
 						if (rowElem == null) {
@@ -115,7 +116,7 @@ public class XMLWriter {
 						}
 						Element colElem = document.createElement("col");
 						colElem.setAttribute("num", Integer.toString(colPos));
-						setCellElement(document, colElem, cells[colPos]);
+						setCellElement(document, colElem, cellsInRow[colIndex]);
 						rowElem.appendChild(colElem);
 					}
 					if (rowElem != null) {

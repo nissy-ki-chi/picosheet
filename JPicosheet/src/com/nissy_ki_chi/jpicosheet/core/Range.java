@@ -117,11 +117,11 @@ public class Range implements CellGroupReference {
 	 */
 	public Cell[] getRowArray(int rowPos) {
 		int rowIndex = rowPos - 1;
-		Cell[] rows = new Cell[_offsetRowTo - _offsetRowFrom + 1];
-		for (int index = 0; index < rows.length; index++) {
-			rows[index] = _table.getCell(_offsetRowFrom + rowIndex, _offsetColFrom + index);
+		Cell[] rowCells = new Cell[_offsetColTo - _offsetColFrom + 1];
+		for (int index = 0; index < rowCells.length; index++) {
+			rowCells[index] = _table.getCell(_offsetRowFrom + rowIndex, _offsetColFrom + index);
 		}
-		return rows;
+		return rowCells;
 	}
 
 
@@ -131,11 +131,11 @@ public class Range implements CellGroupReference {
 	 * @return 指定した列のセルオブジェクト配列
 	 */
 	public Cell[] getColArray(int colPos) {
-		Cell[] cols = new Cell[_offsetColTo - _offsetColFrom + 1];
-		for (int index = 0; index < cols.length; index++) {
-			cols[index] = _table.getCell(_offsetRowFrom + index, _offsetColFrom + colPos);
+		Cell[] colCells = new Cell[_offsetRowTo - _offsetRowFrom + 1];
+		for (int index = 0; index < colCells.length; index++) {
+			colCells[index] = _table.getCell(_offsetRowFrom + index, _offsetColFrom + colPos);
 		}
-		return cols;
+		return colCells;
 	}
 
 

@@ -92,7 +92,7 @@ Table table;
 		Range range = table.getRange("R1C1:R5C6");
 
 		Cell[] rowArray = range.getRowArray(1);
-		assertEquals(5, rowArray.length);
+		assertEquals(6, rowArray.length);
 	}
 
 	public void testGetColArray() {
@@ -100,7 +100,7 @@ Table table;
 		Range range = table.getRange("R1C1:R5C6");
 
 		Cell[] colArray = range.getColArray(1);
-		assertEquals(6, colArray.length);
+		assertEquals(5, colArray.length);
 	}
 
 	public void testGetRowArrayValue() {
