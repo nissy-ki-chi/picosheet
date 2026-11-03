@@ -25,7 +25,6 @@ import com.nissy_ki_chi.jpicosheet.core.Cell;
 import com.nissy_ki_chi.jpicosheet.core.Range;
 import com.nissy_ki_chi.jpicosheet.core.Sheet;
 import com.nissy_ki_chi.jpicosheet.core.Table;
-import com.sun.org.apache.bcel.internal.generic.NEW;
 
 import junit.framework.TestCase;
 

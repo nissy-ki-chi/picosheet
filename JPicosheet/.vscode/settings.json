@@ -1,0 +1,20 @@
+{
+	"files.encoding": "utf8",
+	"files.eol": "\r\n",
+	"java.configuration.updateBuildConfiguration": "automatic",
+	"java.format.settings.url": ".vscode/jpicosheet-formatter.xml",
+	"java.format.settings.profile": "JPicosheet",
+	"java.format.comments.enabled": false,
+	"[java]": {
+		"editor.formatOnSave": true,
+		"editor.formatOnSaveMode": "modifications"
+	},
+	"git.openRepositoryInParentFolders": "always",
+	"java.import.gradle.enabled": false,
+	"java.import.maven.enabled": false,
+	"java.test.config": {
+		"name": "JPicosheet",
+		"workingDirectory": "${workspaceFolder}",
+		"vmArgs": ["-Dfile.encoding=UTF-8"]
+	}
+}
