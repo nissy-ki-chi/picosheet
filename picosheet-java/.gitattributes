@@ -1,0 +1,3 @@
+# Maven Wrapper のスクリプトは改行コードが違うと動かないため固定する
+mvnw text eol=lf
+*.cmd text eol=crlf

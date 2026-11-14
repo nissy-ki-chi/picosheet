@@ -1,0 +1,12 @@
+# Maven のビルド結果
+/target/
+
+# 移行前の Ant / Eclipse / build-test.ps1 の出力先 (ローカルに残っていても無視する)
+/bin/
+/build/
+
+# IDE が生成するプロジェクト設定 (Maven の pom.xml から作り直せる)
+.classpath
+.project
+.settings/
+.factorypath

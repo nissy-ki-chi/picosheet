@@ -1,0 +1,29 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "ビルドしてテスト (mvnw test)",
+			"type": "process",
+			"command": "${workspaceFolder}\\mvnw.cmd",
+			"args": ["-B", "test"],
+			"group": { "kind": "test", "isDefault": true },
+			"problemMatcher": []
+		},
+		{
+			"label": "ビルドのみ (mvnw compile)",
+			"type": "process",
+			"command": "${workspaceFolder}\\mvnw.cmd",
+			"args": ["-B", "compile"],
+			"group": { "kind": "build", "isDefault": true },
+			"problemMatcher": []
+		},
+		{
+			"label": "jar を作成 (mvnw package)",
+			"type": "process",
+			"command": "${workspaceFolder}\\mvnw.cmd",
+			"args": ["-B", "package"],
+			"group": "build",
+			"problemMatcher": []
+		}
+	]
+}

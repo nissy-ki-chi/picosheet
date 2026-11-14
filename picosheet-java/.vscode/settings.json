@@ -1,0 +1,19 @@
+{
+	"files.encoding": "utf8",
+	"files.eol": "\r\n",
+	"java.configuration.updateBuildConfiguration": "automatic",
+	"java.format.settings.url": ".vscode/picosheet-formatter.xml",
+	"java.format.settings.profile": "Picosheet",
+	"java.format.comments.enabled": false,
+	"[java]": {
+		"editor.formatOnSave": true,
+		"editor.formatOnSaveMode": "modifications"
+	},
+	"git.openRepositoryInParentFolders": "always",
+	"java.import.gradle.enabled": false,
+	"java.test.config": {
+		"name": "Picosheet",
+		"workingDirectory": "${workspaceFolder}",
+		"vmArgs": ["-Dfile.encoding=UTF-8"]
+	}
+}
