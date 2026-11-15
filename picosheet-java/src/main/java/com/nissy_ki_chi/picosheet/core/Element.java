@@ -519,6 +519,7 @@ public class Element {
 			break;
 		case BOOLEAN:
 			this._value = new Boolean(false);
+			break;
 		case ERROR:
 			throw new IllegalArgumentException("Errorの場合、valueの指定が必要");
 		case OPERATOR:
