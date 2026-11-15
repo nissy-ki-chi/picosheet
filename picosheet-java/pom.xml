@@ -13,6 +13,14 @@
 	<description>Spreadsheet engine for Java applications: named cells, formulas and automatic recalculation without a UI.</description>
 	<url>https://github.com/nissy-ki-chi/picosheet</url>
 
+	<licenses>
+		<license>
+			<name>Apache-2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
 	<scm>
 		<url>https://github.com/nissy-ki-chi/picosheet</url>
 		<connection>scm:git:https://github.com/nissy-ki-chi/picosheet.git</connection>

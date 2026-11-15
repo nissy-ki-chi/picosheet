@@ -51,10 +51,10 @@
 | 23 | 仕様 | 桁の大きい数を `getValueString()` で取り出すと、指数表記になることがある（`1234567890123456789` → `1.234567890123457E+18`） | `Cell.getValueString` |
 | 24 | 不具合 | テストは `AllTests` のスイート経由でしか実行されず、スイートに登録されていない `ElasticBookWrapperTest`、`HogeShellTest`、`HogeCacheShellTest` は実行されていない（`pom.xml` の surefire の設定で `AllTests` だけを対象にしている） | `src/test/java/test/AllTests`、`pom.xml` |
 | 25 | 不具合 | `SimpleWriterTest.testRead` が、`testWrite` の書き出した `target/writerOut.txt` を読む。テストの実行順が変わったり、`testRead` だけを実行したりすると失敗する | `src/test/java/test/SimpleWriterTest` |
-| 26 | 仕様 | ソースのヘッダーが「JPicosheet」の名前と LGPL 2.1 のままで、リポジトリの LICENSE（Apache License 2.0）と食い違っている。ライセンスの変更は別のコミットで行う予定 | 全ソースのヘッダー |
 | 28 | 仕様 | `Sheet.getCells()` と `getCellNames()` にテーブルの中のセルが含まれない。シートの全セルを調べるには、テーブルを別に回す必要がある | `Sheet`、`Table` |
 
 ## 対応済み
+- ソースのヘッダーが「JPicosheet」の名前と LGPL 2.1 のままだった問題（旧 #26。全ソースを Apache License 2.0 のヘッダーに変更し、`pom.xml` にライセンスを記載）
 - ライブラリ本体が JUnit を `import` していて、JUnit がないとコンパイルできない不具合（旧 #19、Maven への移行時に修正）
 - XML保存で、テーブルの最後の行と列が欠ける不具合（dfa5a47）
 - `AVERAGE` にグループやテーブルを渡すと例外になる不具合（0.1.4）
