@@ -10,7 +10,8 @@
   - **不具合**：例外が出る、結果が明らかにおかしい
   - **仕様**：意図した動作か要検討、またはExcelと違う
   - **機能**：まだない機能
-- 特に記載がないものは、0.1.4（このリポジトリ、2026-11-04時点）で実際に動かして確認しています。
+  - **設計**：作り直しが必要な、公開APIや内部の作りの問題
+- 特に記載がないものは、このリポジトリのソース（0.2.0-SNAPSHOT。2026-11-15に全項目を再確認）で実際に動かして確認しています。
 
 ## 未対応
 
@@ -50,6 +51,24 @@
 | 22 | 機能 | `ElasticBookWrapper` などのラッパーが作りかけ（`deleteSheet` が何もしない、など） | `ElasticBookWrapper`、`ElasticSheetWrapper`、`ElasticCellWrapper` |
 | 23 | 仕様 | 桁の大きい数を `getValueString()` で取り出すと、指数表記になることがある（`1234567890123456789` → `1.234567890123457E+18`） | `Cell.getValueString` |
 | 28 | 仕様 | `Sheet.getCells()` と `getCellNames()` にテーブルの中のセルが含まれない。シートの全セルを調べるには、テーブルを別に回す必要がある | `Sheet`、`Table` |
+
+### 設計の見直し（0.2.0で作り直す）
+0.2.0 はまだ公開していないので、公開APIの互換は保たずに作り直します（2026-11-15に決定）。式の解析（`FormulaParser`）と、依存関係の追跡（`Resolver` の参照の表と、「計算必要」の印を付けてから必要なセルを計算する仕組み）は残します。
+ここの項目は、ソースを読んで確認したものです。#32 だけは実際に動かして確認しています。上の不具合のうち、作り直しで解消するか形が変わるものは「関係する項目」に書いています。不具合を直すのは、関係する設計を決めてからにします。
+
+| # | 種類 | 内容 | 方針の案 | 関係する箇所 | 関係する項目 |
+|---|---|---|---|---|---|
+| 30 | 設計 | 公開APIに内部の部品が出ている。`Element` が「セルの値」と「式の部品（演算子・関数・参照）」を1つの型で表しているので、値を取り出す `switch` に値でない種類が混ざる。`Resolver`（`setCurrentSheet` など）が public で、関数を作る人も直接使う。すべてが `core` パッケージにあり、`module-info` もないので内部を隠せない | 値は `sealed interface Value` と record（数値・文字列・真偽値・日付・空・エラー）で表し、式の部品とは分ける。公開するパッケージと内部のパッケージを分け、`module-info` で内部を隠す | `Element`、`Resolver`、`Function`、パッケージ構成 | #13、#17 |
+| 31 | 設計 | スレッド安全でない。`Element.newElement` が static で `synchronized` のキャッシュ（`WeakHashMap`）を通るので、ブックが別でも全体で1つのロックを取り合う。日付の書式（`SimpleDateFormat`）を static で共有しているので、別々のスレッドで別々のブックを使っても安全とは言えない。`ConcurrentBookWrapper` は API を手で包み直したもの（約500行）で、保守が大変 | static な可変の状態をなくし、「1つのブックは1つのスレッドで使う」ことを基本にする。値は不変にする。並行して使うための仕組みは、そのあとで決める | `Element`、`ConcurrentBookWrapper` | |
+| 32 | 設計 | 値を1つ入れるたびにすぐ再計算し、計算は再帰で行う。長くつながった式で `StackOverflowError` になる（`c1`=`c0+1`、`c2`=`c1+1`、… と5000個つなぐと発生。1000個では起きない）。計算を止める手段は、ブック全体のフラグ（`recalcDisable`）しかない | まとめて値を入れてから1回だけ計算するAPI（バッチ）を用意する。計算の順番を再帰を使わずに決める（トポロジカルソートなど） | `Calculator.doCalc`、`Calculator.recalcIfRequired`、`Book.recalcEnable`/`recalcDisable` | #27 |
+| 33 | 設計 | 日付を `java.util.Date` で扱い、タイムゾーンのずれを `getRawOffset()` で手で足し引きしている（夏時間を考慮していない） | `java.time`（`LocalDate`、`LocalDateTime`）に置き換える | `Cell.setDateValue`、`Cell.getValueString`、`Element` | #16 |
+| 34 | 設計 | 関数を、クラス名の文字列とリフレクション（非推奨の `Class.newInstance`）で登録している。`Book` と `Calculator` がそれぞれ別の関数の一覧（`FunctionFactory`）を持ち、`Book.getFunctionNames` と計算で別の一覧を使っている | ブックごとに1つの関数の一覧（`FunctionRegistry` など）を持ち、ラムダやクラスで登録できる公開APIにする。関数名の大文字・小文字の扱いもここで決める | `FunctionFactory`、`BuiltinFunctionsConstants`、`Book`、`Calculator`、`Function` | #6、#20、#21 |
+| 35 | 設計 | エラーの伝え方が、例外・エラー値・セルの状態 `ERROR` の3通りあり、使い分けが決まっていない。エラー値には、どのセルで、なぜ起きたかの情報がない | 式の中で起きたことは、すべてエラー値で返す（例外を呼び出し側に漏らさない）。エラー値に、元になったセルと理由を持たせる。ブック全体のエラーを一覧で取り出せるようにする | `Element.ErrorType`、`Calculator`、`Sheet.getErrorCells` | #1、#3、#4、#11、#12、#13 |
+| 36 | 設計 | `Cell.equals` は中身で比べるのに、`hashCode` は名前から作っている（Java の約束に反する）。`Sheet.equals` は、`Sheet` 以外のオブジェクトと比べても `true` を返す | セルやシートは「同じオブジェクトかどうか」で比べる（`equals` を上書きしない）。中身を比べるメソッドが必要なら、別の名前で用意する | `Cell.equals`/`hashCode`、`Sheet.equals`/`hashCode` | |
+| 37 | 設計 | 数値を `String` で渡す必要がある（`setNumberValue("1200")`）。`setValue(String)` は文字列から型を推測する（日付の書式をいくつも試す） | `BigDecimal`、`long`、`LocalDate` などを受け取るメソッドにする。文字列からの推測は、読み込み用の機能として分ける | `Cell.setValue`、`Cell.setNumberValue` | #23 |
+| 38 | 設計 | 本体の jar に、試作のクラス（`HogeShell`、`HogeCacheShell`）と、作りかけのラッパー（`Elastic*`）が入っている | 試作のクラスは削除する。ラッパーは、必要かどうかを決めてから作り直すか削除する | `util/HogeShell`、`util/HogeCacheShell`、`Elastic*Wrapper` | #22 |
+| 39 | 機能 | AIエージェントが計算の道具として使うための入出力がない。今あるのは独自のテキスト形式（`TextLoader`）と XML だけ | モデル全体（セル・式・グループ・テーブル）を JSON で渡し、すべての値とエラーをまとめて JSON で返す | `util/` | #5、#8 |
+| 40 | 機能 | AIや人が計算を確かめるための機能がない。値がどのセルから計算されたかをたどれない。セルの数や依存の深さに上限を付けられない | 値の由来（依存しているセル）をたどれるAPIを用意する。セルの数や依存の深さに上限を設定できるようにする | `Resolver`、`Calculator` | #32 |
 
 ## 対応済み
 - テストが `AllTests` のスイート経由でしか実行されず、登録されていないテストクラスが実行されていなかった問題（旧 #24。名前が `Test` で終わるクラスをすべて実行するように変更し、`AllTests` を削除）
