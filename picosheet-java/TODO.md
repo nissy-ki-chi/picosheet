@@ -22,6 +22,7 @@
 | 3 | 不具合 | 別シートのグループを参照すると例外になる | `SUM(other!g@)` → `IllegalArgumentException: Invalid Sheetname other` | `Resolver.getCellsFromGroup` |
 | 4 | 不具合 | 真偽値に単項の `-` を付けると例外になる | `-true` → `IllegalStateException` | 原因は未調査（`FormulaParser.checkInfixNotation` の単項演算子のチェック、または `Calculator.operateArithmetic` の `UNARY_MINUS` の分岐が怪しい） |
 | 5 | 不具合 | `TextLoader` の `begincell`～`endcell` の中に空行やコメント行があると例外になる（0.1.3で確認。0.1.4でもこの処理は変わっていない） | `begincell` の直後に空行を入れる → `IllegalStateException: No match found` | `util/TextLoader.CellCreator.process` |
+| 27 | 不具合 | シートに `INVALID_FORMULA` のセルが1つでもあると、`setMathContext` で例外になる（式を読み取れなかったセルは RPN が `null` のまま、再計算の対象になる） | `sum(1)` のセルを作ってから `sheet.setMathContext(new MathContext(34))` → `NullPointerException` | `Sheet.setMathContext`、`Calculator.recalcEnable`、`Calculator.doCalc` |
 
 ### 結果が間違っている、または書いた式が通らないもの
 | # | 種類 | 内容 | 再現例 | 関係する箇所 |
@@ -39,6 +40,7 @@
 | 16 | 仕様 | 文字列どうしの大小比較と、日付どうしの比較が、常に false になる | `str1<str2` → false | `Calculator.operateComparison`（コード中にTODOあり） |
 | 17 | 仕様 | 空のセルは計算では0として扱われるのに、0と比較すると等しくならない | `empty+1` → 1、`empty=0` → false | `Calculator.operateComparison`（型が違うと false にしている） |
 | 18 | 仕様 | `^` は `double` に変換して計算するので、`BigDecimal` の精度が失われる | `2^0.5` → `1.41421356237309514547...` | `Calculator.operateArithmetic`（`POWER` の分岐） |
+| 29 | 不具合 | `Group.addCell(String)` が、グループのあるシートではなくデフォルトシート（最初のシート）からセルを探す | 2つ目のシート `other` で `other.addGroup("g@").addCell("y")` → `ReferenceNotFoundException: cellname y is not found` | `Group.addCell(String)`（`Resolver.getCell` にシート名を渡していない） |
 
 ### 作りの問題・足りない機能
 | # | 種類 | 内容 | 関係する箇所 |
@@ -50,6 +52,7 @@
 | 24 | 不具合 | テストは `AllTests` のスイート経由でしか実行されず、スイートに登録されていない `ElasticBookWrapperTest`、`HogeShellTest`、`HogeCacheShellTest` は実行されていない（`pom.xml` の surefire の設定で `AllTests` だけを対象にしている） | `src/test/java/test/AllTests`、`pom.xml` |
 | 25 | 不具合 | `SimpleWriterTest.testRead` が、`testWrite` の書き出した `target/writerOut.txt` を読む。テストの実行順が変わったり、`testRead` だけを実行したりすると失敗する | `src/test/java/test/SimpleWriterTest` |
 | 26 | 仕様 | ソースのヘッダーが「JPicosheet」の名前と LGPL 2.1 のままで、リポジトリの LICENSE（Apache License 2.0）と食い違っている。ライセンスの変更は別のコミットで行う予定 | 全ソースのヘッダー |
+| 28 | 仕様 | `Sheet.getCells()` と `getCellNames()` にテーブルの中のセルが含まれない。シートの全セルを調べるには、テーブルを別に回す必要がある | `Sheet`、`Table` |
 
 ## 対応済み
 - ライブラリ本体が JUnit を `import` していて、JUnit がないとコンパイルできない不具合（旧 #19、Maven への移行時に修正）
