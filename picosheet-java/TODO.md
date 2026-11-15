@@ -54,12 +54,13 @@
 
 ### 設計の見直し（0.2.0で作り直す）
 0.2.0 はまだ公開していないので、公開APIの互換は保たずに作り直します（2026-11-15に決定）。式の解析（`FormulaParser`）と、依存関係の追跡（`Resolver` の参照の表と、「計算必要」の印を付けてから必要なセルを計算する仕組み）は残します。
-ここの項目は、ソースを読んで確認したものです。#32 だけは実際に動かして確認しています。上の不具合のうち、作り直しで解消するか形が変わるものは「関係する項目」に書いています。不具合を直すのは、関係する設計を決めてからにします。
+決めた方針の詳細と理由は [DESIGN.md](DESIGN.md) に書きます。
+ここの項目は、ソースを読んで確認したものです。#31 のメモリの件と #32 は、実際に動かして確認しています。上の不具合のうち、作り直しで解消するか形が変わるものは「関係する項目」に書いています。不具合を直すのは、関係する設計を決めてからにします。
 
 | # | 種類 | 内容 | 方針の案 | 関係する箇所 | 関係する項目 |
 |---|---|---|---|---|---|
-| 30 | 設計 | 公開APIに内部の部品が出ている。`Element` が「セルの値」と「式の部品（演算子・関数・参照）」を1つの型で表しているので、値を取り出す `switch` に値でない種類が混ざる。`Resolver`（`setCurrentSheet` など）が public で、関数を作る人も直接使う。すべてが `core` パッケージにあり、`module-info` もないので内部を隠せない | 値は `sealed interface Value` と record（数値・文字列・真偽値・日付・空・エラー）で表し、式の部品とは分ける。公開するパッケージと内部のパッケージを分け、`module-info` で内部を隠す | `Element`、`Resolver`、`Function`、パッケージ構成 | #13、#17 |
-| 31 | 設計 | スレッド安全でない。`Element.newElement` が static で `synchronized` のキャッシュ（`WeakHashMap`）を通るので、ブックが別でも全体で1つのロックを取り合う。日付の書式（`SimpleDateFormat`）を static で共有しているので、別々のスレッドで別々のブックを使っても安全とは言えない。`ConcurrentBookWrapper` は API を手で包み直したもの（約500行）で、保守が大変 | static な可変の状態をなくし、「1つのブックは1つのスレッドで使う」ことを基本にする。値は不変にする。並行して使うための仕組みは、そのあとで決める | `Element`、`ConcurrentBookWrapper` | |
+| 30 | 設計 | 公開APIに内部の部品が出ている。`Element` が「セルの値」と「式の部品（演算子・関数・参照）」を1つの型で表しているので、値を取り出す `switch` に値でない種類が混ざる。`Resolver`（`setCurrentSheet` など）が public で、関数を作る人も直接使う。すべてが `core` パッケージにあり、`module-info` もないので内部を隠せない | **方針を決めた（2026-11-15、詳細は [DESIGN.md](DESIGN.md) の2章と3章）**：`Element` を「値（`Value`、公開）」「式（`Token` と `Expr`、内部）」「関数の引数（解決済みの値か値の並び）」に分ける。値は不変の sealed interface と record で表し、全体共通のキャッシュはなくす（空・`TRUE`・`FALSE` は定数で共有）。式の内部表現は RPN をやめて構文木（AST）にする。比較演算子は Excel と同じく二項演算子として左から順に計算する（連続比較はやめる）。計算のルールは Excel に準ずる（1章）。公開するパッケージと内部のパッケージを分け、`module-info` で内部を隠す。日付の型、関数の API、エラー値の情報、Java のバージョンは未決定 | `Element`、`Resolver`、`Function`、パッケージ構成 | #13、#17 |
+| 31 | 設計 | スレッド安全でない。`Element.newElement` が static で `synchronized` のキャッシュ（`WeakHashMap`）を通るので、ブックが別でも全体で1つのロックを取り合う。このキャッシュは値にキーと同じオブジェクトを入れているので、エントリーが回収されず、メモリが解放されない（値を100万回入れ替えると約80MB増え、ブックを捨てても減らない。詳細は DESIGN.md の 2.4）。日付の書式（`SimpleDateFormat`）を static で共有しているので、別々のスレッドで別々のブックを使っても安全とは言えない。`ConcurrentBookWrapper` は API を手で包み直したもの（約500行）で、保守が大変 | static な可変の状態をなくし、「1つのブックは1つのスレッドで使う」ことを基本にする。値は不変にする。並行して使うための仕組みは、そのあとで決める | `Element`、`ConcurrentBookWrapper` | |
 | 32 | 設計 | 値を1つ入れるたびにすぐ再計算し、計算は再帰で行う。長くつながった式で `StackOverflowError` になる（`c1`=`c0+1`、`c2`=`c1+1`、… と5000個つなぐと発生。1000個では起きない）。計算を止める手段は、ブック全体のフラグ（`recalcDisable`）しかない | まとめて値を入れてから1回だけ計算するAPI（バッチ）を用意する。計算の順番を再帰を使わずに決める（トポロジカルソートなど） | `Calculator.doCalc`、`Calculator.recalcIfRequired`、`Book.recalcEnable`/`recalcDisable` | #27 |
 | 33 | 設計 | 日付を `java.util.Date` で扱い、タイムゾーンのずれを `getRawOffset()` で手で足し引きしている（夏時間を考慮していない） | `java.time`（`LocalDate`、`LocalDateTime`）に置き換える | `Cell.setDateValue`、`Cell.getValueString`、`Element` | #16 |
 | 34 | 設計 | 関数を、クラス名の文字列とリフレクション（非推奨の `Class.newInstance`）で登録している。`Book` と `Calculator` がそれぞれ別の関数の一覧（`FunctionFactory`）を持ち、`Book.getFunctionNames` と計算で別の一覧を使っている | ブックごとに1つの関数の一覧（`FunctionRegistry` など）を持ち、ラムダやクラスで登録できる公開APIにする。関数名の大文字・小文字の扱いもここで決める | `FunctionFactory`、`BuiltinFunctionsConstants`、`Book`、`Calculator`、`Function` | #6、#20、#21 |
