@@ -49,11 +49,11 @@
 | 21 | 機能 | 自分で作った関数を、実行時に登録する公開APIがない（今は `BuiltinFunctionsConstants` を書き換えるしかない） | `Book`、`FunctionFactory` |
 | 22 | 機能 | `ElasticBookWrapper` などのラッパーが作りかけ（`deleteSheet` が何もしない、など） | `ElasticBookWrapper`、`ElasticSheetWrapper`、`ElasticCellWrapper` |
 | 23 | 仕様 | 桁の大きい数を `getValueString()` で取り出すと、指数表記になることがある（`1234567890123456789` → `1.234567890123457E+18`） | `Cell.getValueString` |
-| 24 | 不具合 | テストは `AllTests` のスイート経由でしか実行されず、スイートに登録されていない `ElasticBookWrapperTest`、`HogeShellTest`、`HogeCacheShellTest` は実行されていない（`pom.xml` の surefire の設定で `AllTests` だけを対象にしている） | `src/test/java/test/AllTests`、`pom.xml` |
-| 25 | 不具合 | `SimpleWriterTest.testRead` が、`testWrite` の書き出した `target/writerOut.txt` を読む。テストの実行順が変わったり、`testRead` だけを実行したりすると失敗する | `src/test/java/test/SimpleWriterTest` |
 | 28 | 仕様 | `Sheet.getCells()` と `getCellNames()` にテーブルの中のセルが含まれない。シートの全セルを調べるには、テーブルを別に回す必要がある | `Sheet`、`Table` |
 
 ## 対応済み
+- テストが `AllTests` のスイート経由でしか実行されず、登録されていないテストクラスが実行されていなかった問題（旧 #24。名前が `Test` で終わるクラスをすべて実行するように変更し、`AllTests` を削除）
+- `SimpleWriterTest.testRead` が `testWrite` の出力したファイルに依存していた問題（旧 #25。それぞれのテストが一時ファイルに書き出してから読むように変更）
 - ソースのヘッダーが「JPicosheet」の名前と LGPL 2.1 のままだった問題（旧 #26。全ソースを Apache License 2.0 のヘッダーに変更し、`pom.xml` にライセンスを記載）
 - ライブラリ本体が JUnit を `import` していて、JUnit がないとコンパイルできない不具合（旧 #19、Maven への移行時に修正）
 - XML保存で、テーブルの最後の行と列が欠ける不具合（dfa5a47）

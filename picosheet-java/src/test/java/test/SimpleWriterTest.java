@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import com.nissy_ki_chi.picosheet.core.Book;
 import com.nissy_ki_chi.picosheet.core.ConcurrentBookWrapper;
@@ -45,6 +47,20 @@ public class SimpleWriterTest extends TestCase {
 
 
 	public void testWrite() throws IOException {
+		Path file = Files.createTempFile("SimpleWriterTest", ".txt");
+		try {
+			writeSampleBook(file);
+			assertTrue(Files.size(file) > 0);
+		} finally {
+			Files.deleteIfExists(file);
+		}
+	}
+
+	/**
+	 * テスト用のブックを作り、SimpleWriter で指定されたファイルに書き出します。
+	 * testRead は、このメソッドで書き出したファイルを読み込むので、testWrite の実行順に依存しません。
+	 */
+	private void writeSampleBook(Path file) throws IOException {
 
 		Book book = new Book("myBook");
 		Sheet sheet = book.addSheet("sheet1");
@@ -77,7 +93,7 @@ public class SimpleWriterTest extends TestCase {
 
 		BufferedWriter bw = null;
 		try {
-			bw = new BufferedWriter(new FileWriter("target/writerOut.txt"));
+			bw = new BufferedWriter(new FileWriter(file.toFile()));
 			SimpleWriter sw = new SimpleWriter(cbr);
 			sw.write(bw);
 		} finally {
@@ -89,13 +105,23 @@ public class SimpleWriterTest extends TestCase {
 	}
 
 	public void testRead() throws IOException {
+		Path file = Files.createTempFile("SimpleWriterTest", ".txt");
+		try {
+			writeSampleBook(file);
+			readAndCheck(file);
+		} finally {
+			Files.deleteIfExists(file);
+		}
+	}
+
+	private void readAndCheck(Path file) throws IOException {
 		Book book = new Book("myBook");
 		ConcurrentBookWrapper cbr = new ConcurrentBookWrapper(book);
 
 		BufferedReader br = null;;
 
 		try {
-			br = new BufferedReader(new InputStreamReader(new FileInputStream("target/writerOut.txt")));
+			br = new BufferedReader(new InputStreamReader(new FileInputStream(file.toFile())));
 			SimpleReader sr = new SimpleReader(cbr);
 			sr.Read(br);
 			

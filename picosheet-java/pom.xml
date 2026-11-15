@@ -79,9 +79,9 @@
 			<plugin>
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<!-- テストは AllTests のスイート経由で実行する (登録されていないテストクラスは実行されない。TODO.md 参照) -->
+					<!-- 名前が Test で終わるクラスをすべてテストとして実行する -->
 					<includes>
-						<include>**/AllTests.java</include>
+						<include>**/*Test.java</include>
 					</includes>
 				</configuration>
 			</plugin>
