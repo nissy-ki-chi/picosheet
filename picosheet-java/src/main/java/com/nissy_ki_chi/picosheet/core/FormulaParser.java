@@ -54,7 +54,6 @@ class FormulaParser {
 	private static final String STRING_OPERATOR_PATTERN = "&";
 	private static Pattern _tokens = Pattern.compile(SPACE_PATTERN + "|" +
 														NUMERIC_PATTERN + "|" +
-														TRUE_FALSE_PATTERN + "|" +
 														STRING_PATTERN + "|" +
 														COMPARISON_OPERATOR_PATTERN + "|" +
 														ARITHMETIC_OPERATOR_PATTERN + "|" +
@@ -62,23 +61,23 @@ class FormulaParser {
 														PARENTHESIS_PATTERN + "|" +
 														FUNCTION_NAME_PATTERN + "|" + "," + "|" +
 														SHEETGROUP_NAME_PATTERN + "|" +
-														SHEETCELL_NAME_PATTERN + "|" +
 														SHEETTABLE_NAME_WITH_RANGE_PATTERN + "|" +
 														SHEETTABLE_NAME_WITH_ADDRESS_PATTERN + "|" +
+														SHEETTABLE_NAME_PATTERN + "|" +
+														SHEETCELL_NAME_PATTERN + "|" +
 														Group.GROUP_NAME_PATTERN + "|" +
 														Table.TABLE_NAME_WITH_RANGE_PATTERN + "|" +
 														Table.TABLE_NAME_WITH_ADDRESS_PATTERN + "|" +
-														SHEETTABLE_NAME_PATTERN + "|" +
 														Table.TABLE_NAME_PATTERN + "|" +
 														Cell.CELL_NAME_PATTERN);
 	private static Pattern _cellRefPattern = Pattern.compile(
 			SHEETTABLE_NAME_WITH_ADDRESS_PATTERN + "|" + Table.TABLE_NAME_WITH_ADDRESS_PATTERN + "|" +
 			SHEETCELL_NAME_PATTERN + "|" + Cell.CELL_NAME_PATTERN);
 	private static Pattern _groupRefPattern = Pattern.compile(SHEETGROUP_NAME_PATTERN + "|" + Group.GROUP_NAME_PATTERN);
-	private static Pattern _tableRefPattern = Pattern.compile(SHEETTABLE_NAME_PATTERN + "|" + Table.TABLE_NAME_PATTERN + "|" + Table.TABLE_NAME_WITH_RANGE_PATTERN);
+	private static Pattern _tableRefPattern = Pattern.compile(SHEETTABLE_NAME_WITH_RANGE_PATTERN + "|" + SHEETTABLE_NAME_PATTERN + "|" + Table.TABLE_NAME_PATTERN + "|" + Table.TABLE_NAME_WITH_RANGE_PATTERN);
 	private static Pattern _spacePattern = Pattern.compile(SPACE_PATTERN);
 	private static Pattern _numericPattern = Pattern.compile(NUMERIC_PATTERN);
-	private static Pattern _truefalsePattern = Pattern.compile(TRUE_FALSE_PATTERN);
+	private static Pattern _truefalsePattern = Pattern.compile(TRUE_FALSE_PATTERN, Pattern.CASE_INSENSITIVE);
 	private static Pattern _stringPattern = Pattern.compile(STRING_PATTERN);
 	private static Pattern _functionPattern = Pattern.compile(FUNCTION_NAME_PATTERN);
 

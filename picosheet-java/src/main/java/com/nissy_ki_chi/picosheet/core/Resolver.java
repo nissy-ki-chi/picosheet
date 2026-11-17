@@ -341,10 +341,10 @@ public class Resolver {
 		String fqn = getFullyQualifiedName(cell.getSheet(), referenceGroupName);
 		// _referencesに登録
 		registReferences(cell, fqn);
-		// グループは存在するか？
+		// グループは存在するか？(別のシートのグループもあるので、シート名からシートを決める)
 		Group group = null;
 		try {
-			group = cell.getSheet().getGroup(fqn);
+			group = getGroup(fqn);
 		} catch (ReferenceNotFoundException e) {
 			// 存在しない場合、それ以上何もしない
 			return;
@@ -422,10 +422,10 @@ public class Resolver {
 		}
 		// _referencesに登録
 		registReferences(cell, fqn);
-		// テーブルは存在するか？
+		// テーブルは存在するか？(別のシートのテーブルもあるので、シート名からシートを決める)
 		Table table = null;
 		try {
-			table = cell.getSheet().getTable(fqn);
+			table = getTable(fqn);
 		} catch (ReferenceNotFoundException e) {
 			// 存在しない場合、それ以上何もしない
 			return;

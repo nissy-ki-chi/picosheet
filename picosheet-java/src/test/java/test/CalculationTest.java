@@ -27,6 +27,7 @@ import com.nissy_ki_chi.picosheet.core.Element;
 import com.nissy_ki_chi.picosheet.core.FormulaException;
 import com.nissy_ki_chi.picosheet.core.ReferenceNotFoundException;
 import com.nissy_ki_chi.picosheet.core.Sheet;
+import com.nissy_ki_chi.picosheet.core.Table;
 import com.nissy_ki_chi.picosheet.core.Cell.CellStatus;
 import com.nissy_ki_chi.picosheet.core.Element.ElementType;
 import com.nissy_ki_chi.picosheet.core.Element.ErrorType;
@@ -852,6 +853,84 @@ public class CalculationTest extends TestCase {
 		sheet2.addCell("sheet2_cell1").setNumberValue("20");
 		sheet.addCell("calcCell").setFormula("mySheet!sheet_cell1 + sheet2!sheet2_cell1");
 		assertEquals(new BigDecimal("30"), sheet.getCell("calcCell").getValue().getNumber());
+	}
+
+	/**
+	 * 異なるシートのテーブルを参照できること(#9)
+	 */
+	public void testAnotherSheetTableCalc() {
+		Sheet sheet2 = book.addSheet("sheet2");
+		Table table = sheet2.addTable("t#", 2, 2);
+		table.getCell(1, 1).setNumberValue("1");
+		table.getCell(2, 1).setNumberValue("2");
+		table.getCell(1, 2).setNumberValue("3");
+		table.getCell(2, 2).setNumberValue("4");
+
+		sheet.addCell("address").setFormula("sheet2!t#R1C1 + 10");
+		assertEquals(new BigDecimal("11"), sheet.getCell("address").getValue().getNumber());
+
+		sheet.addCell("whole").setFormula("SUM(sheet2!t#)");
+		assertEquals(new BigDecimal("10"), sheet.getCell("whole").getValue().getNumber());
+
+		sheet.addCell("range").setFormula("SUM(sheet2!t#R1C1:R2C1)");
+		assertEquals(new BigDecimal("3"), sheet.getCell("range").getValue().getNumber());
+
+		// 参照先のテーブルの値を変えると再計算されること
+		table.getCell(1, 1).setNumberValue("5");
+		assertEquals(new BigDecimal("15"), sheet.getCell("address").getValue().getNumber());
+		assertEquals(new BigDecimal("14"), sheet.getCell("whole").getValue().getNumber());
+		assertEquals(new BigDecimal("7"), sheet.getCell("range").getValue().getNumber());
+	}
+
+	/**
+	 * 異なるシートのグループを参照できること(#3)
+	 */
+	public void testAnotherSheetGroupCalc() {
+		Sheet sheet2 = book.addSheet("sheet2");
+		Cell c1 = sheet2.addCell("c1").setNumberValue("1");
+		Cell c2 = sheet2.addCell("c2").setNumberValue("2");
+		sheet2.addGroup("g@").addCell(c1).addCell(c2);
+
+		sheet.addCell("groupSum").setFormula("SUM(sheet2!g@)");
+		assertEquals(new BigDecimal("3"), sheet.getCell("groupSum").getValue().getNumber());
+
+		// 参照先のグループのセルの値を変えると再計算されること
+		c1.setNumberValue("5");
+		assertEquals(new BigDecimal("7"), sheet.getCell("groupSum").getValue().getNumber());
+	}
+
+	/**
+	 * true、falseで始まる名前のセルを参照できること(#10)
+	 */
+	public void testBooleanPrefixedCellName() {
+		sheet.addCell("trueValue").setNumberValue("1");
+		sheet.addCell("falsehood").setNumberValue("2");
+
+		sheet.addCell("calc1").setFormula("trueValue + 1");
+		assertEquals(new BigDecimal("2"), sheet.getCell("calc1").getValue().getNumber());
+
+		sheet.addCell("calc2").setFormula("falsehood * 10");
+		assertEquals(new BigDecimal("20"), sheet.getCell("calc2").getValue().getNumber());
+	}
+
+	/**
+	 * 真偽値のリテラルは大文字と小文字を区別しないこと
+	 */
+	public void testBooleanLiteralIgnoreCase() {
+		String[] trueLiterals = {"true", "TRUE", "True"};
+		for (String literal : trueLiterals) {
+			Cell c = sheet.addCell("t_" + literal);
+			c.setFormula(literal);
+			assertEquals(literal, ElementType.BOOLEAN, c.getValue().getType());
+			assertEquals(literal, Boolean.TRUE, c.getValue().getBoolean());
+		}
+		String[] falseLiterals = {"false", "FALSE", "False"};
+		for (String literal : falseLiterals) {
+			Cell c = sheet.addCell("f_" + literal);
+			c.setFormula(literal);
+			assertEquals(literal, ElementType.BOOLEAN, c.getValue().getType());
+			assertEquals(literal, Boolean.FALSE, c.getValue().getBoolean());
+		}
 	}
 
 	/**

@@ -20,7 +20,6 @@
 |---|---|---|---|---|
 | 1 | 不具合 | テーブル参照で行番号・列番号に0を使うと、エラー値ではなく例外になる（範囲外の `R4C1` は `INVALID_REFERENCES` のエラー値になるので、扱いがそろっていない） | `t#R0C1+1`、`SUM(t#RxC0)` → `IllegalArgumentException` | `Table`、`Range`、`Resolver.getCellsFromTable` |
 | 2 | 不具合 | `AVERAGE` に数値が1つもないと0で割ってしまう | `AVERAGE(str)`（文字列のセルのみ）→ `ArithmeticException` | `function/AVERAGE` |
-| 3 | 不具合 | 別シートのグループを参照すると例外になる | `SUM(other!g@)` → `IllegalArgumentException: Invalid Sheetname other` | `Resolver.getCellsFromGroup` |
 | 4 | 不具合 | 真偽値に単項の `-` を付けると例外になる | `-true` → `IllegalStateException` | 原因は未調査（`FormulaParser.checkInfixNotation` の単項演算子のチェック、または `Calculator.operateArithmetic` の `UNARY_MINUS` の分岐が怪しい） |
 | 5 | 不具合 | `TextLoader` の `begincell`～`endcell` の中に空行やコメント行があると例外になる（0.1.3で確認。0.1.4でもこの処理は変わっていない） | `begincell` の直後に空行を入れる → `IllegalStateException: No match found` | `util/TextLoader.CellCreator.process` |
 | 27 | 不具合 | シートに `INVALID_FORMULA` のセルが1つでもあると、`setMathContext` で例外になる（式を読み取れなかったセルは RPN が `null` のまま、再計算の対象になる） | `sum(1)` のセルを作ってから `sheet.setMathContext(new MathContext(34))` → `NullPointerException` | `Sheet.setMathContext`、`Calculator.recalcEnable`、`Calculator.doCalc` |
@@ -31,8 +30,6 @@
 | 6 | 不具合 | 関数名を大文字で書かないと認識されない（0.1.3では小文字でも使えた） | `sum(1,2)`、`Sum(1,2)` → `INVALID_FORMULA` | `FunctionFactory`（`hasFunction` などで大文字に変換する処理が外された） |
 | 7 | 不具合 | `addRow()` を呼んでも `getRowSize()` が増えない（追加した行のセルが使えるかどうかは未確認） | 3行のテーブルで `addRow()` → `getRowSize()` が3のまま | `Table.addRow`、`RowsChunk` |
 | 8 | 不具合 | `TextLoader` でシートを2つ以上書いても、セルがすべて最初のシートに入る | `beginsheet name=s2` の中に書いたセルが `s1` に入る | `util/TextLoader.loadSheet`（作業中のシートを切り替えていない） |
-| 9 | 不具合 | 別シートのテーブルを参照できない | `other!t#R1C1`、`SUM(other!t#)` → `INVALID_FORMULA` | `FormulaParser`（`シート名!セル名` のパターンが先に一致してしまう） |
-| 10 | 不具合 | `true` や `false` で始まる名前のセルを参照できない | `trueValue+1` → `INVALID_FORMULA` | `FormulaParser`（真偽値のパターンがセル名より先に一致する） |
 | 11 | 不具合 | エラー値が表に出ないまま計算が進む | `SUM(1/0, 2)` → 2、`IF(1/0>1, 1, 2)` → 2 | `function/SUM`、`Calculator.operateComparison` |
 | 12 | 不具合 | 計算を重ねると、最初に起きたエラーの種類が分からなくなる | `1/0+1` → `WRONG_VALUE`（`DIVIDE_BY_ZERO` にならない） | `Calculator.operateArithmetic` |
 | 13 | 仕様 | `getErrorCells()` や `containsErrorCell()` で見つかるのは、式を読み取れなかったエラーだけ。0除算・参照切れ・循環参照は含まれない | `1/0` のセルが `getErrorCells()` に含まれない | `Sheet`、`Cell.setFormula`、`Calculator.doCalc` |
@@ -72,6 +69,9 @@
 | 40 | 機能 | AIや人が計算を確かめるための機能がない。値がどのセルから計算されたかをたどれない。セルの数や依存の深さに上限を付けられない | 値の由来（依存しているセル）をたどれるAPIを用意する。セルの数や依存の深さに上限を設定できるようにする | `Resolver`、`Calculator` | #32 |
 
 ## 対応済み
+- 別シートのグループを参照すると例外になる不具合（旧 #3。原因は `Resolver.getCellsFromGroup` ではなく `Resolver.registGroupReferences` で、式のあるセルのシートからグループを探していた）
+- 別シートのテーブルを参照できない不具合（旧 #9。`FormulaParser` のパターンの順番に加え、`Calculator.getReferencesCell` と `Resolver.registTableReferences` も別シートのテーブルに対応させた）
+- `true` や `false` で始まる名前のセルを参照できない不具合（旧 #10。あわせて、真偽値のリテラルが大文字と小文字を区別していたのを Excel と同じく区別しないようにした）
 - テストが `AllTests` のスイート経由でしか実行されず、登録されていないテストクラスが実行されていなかった問題（旧 #24。名前が `Test` で終わるクラスをすべて実行するように変更し、`AllTests` を削除）
 - `SimpleWriterTest.testRead` が `testWrite` の出力したファイルに依存していた問題（旧 #25。それぞれのテストが一時ファイルに書き出してから読むように変更）
 - ソースのヘッダーが「JPicosheet」の名前と LGPL 2.1 のままだった問題（旧 #26。全ソースを Apache License 2.0 のヘッダーに変更し、`pom.xml` にライセンスを記載）

@@ -418,8 +418,9 @@ class Calculator {
 		Cell referCell;
 		try {
 			String referenceCellName;
-			if (defaultTable == null && 
-					!Cell.isValidFullyQualifiedCellName(referenceElement.getCellReference())) {
+			if (defaultTable == null &&
+					!Cell.isValidFullyQualifiedCellName(referenceElement.getCellReference()) &&
+					!Table.isValidFullyQualifiedTableNameWithAddress(referenceElement.getCellReference())) {
 				referenceCellName = referencesSheet.getName() + "!" + referenceElement.getCellReference();
 			} else {
 				referenceCellName = referenceElement.getCellReference();
