@@ -25,7 +25,7 @@ s.getCell("qty").setNumberValue("5");     // 参照しているセルは自動�
 total.getValue().getNumber();             // BigDecimal 6000
 ```
 
-- Mavenで使う場合の座標は `com.nissy-ki-chi:picosheet:0.2.0-SNAPSHOT` です（まだ公開していないので、`mvnw.cmd install` でローカルに入れて使います）。Java 17 以降で動きます。
+- Mavenで使う場合の座標は `com.nissy-ki-chi:picosheet:0.2.0-SNAPSHOT` です（まだ公開していないので、`mvnw.cmd install` でローカルに入れて使います）。Java 21 以降で動きます。
 - `addCell` は、同じ名前のセルがすでにあればそのセルを返します（新しく作り直しません）。
 - セルを定義する順番は自由です。まだ存在しないセルを参照すると、その式はいったん `INVALID_REFERENCES` エラーになりますが、参照先のセルを作って値を入れた時点で再計算されます。
 

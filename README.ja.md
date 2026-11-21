@@ -37,7 +37,7 @@ total.getValue().getNumber();             // 6000
 
 ## 必要なもの
 
-- Java 17 以降（ビルドには JDK 17 以降が必要です）
+- Java 21 以降（ビルドには JDK 21 以降が必要です）
 - Maven は不要です。リポジトリに含まれている Maven Wrapper（`mvnw` / `mvnw.cmd`）が自動でダウンロードします。
 
 ## ビルド

@@ -37,7 +37,7 @@ There are only a few functions so far (16, including `SUM`, `AVERAGE` and `IF`),
 
 ## Requirements
 
-- Java 17 or later (building also requires JDK 17 or later)
+- Java 21 or later (building also requires JDK 21 or later)
 - You don't need to install Maven. The Maven Wrapper in the repository (`mvnw` / `mvnw.cmd`) downloads it automatically.
 
 ## Building
