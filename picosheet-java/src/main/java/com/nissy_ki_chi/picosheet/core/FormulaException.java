@@ -31,10 +31,34 @@ public class FormulaException extends PicosheetException {
 	private static final long serialVersionUID = -5237961644571049021L;
 
 	/**
+	 * 誤りのある、元の式の中の位置(0始まり)。分からない場合は-1。
+	 */
+	private final int _position;
+
+	/**
 	 * オブジェクトを初期化します
 	 */
 	public FormulaException() {
 		super();
+		this._position = -1;
+	}
+
+	/**
+	 * 誤りのある位置を指定して、オブジェクトを初期化します
+	 * @param message メッセージ
+	 * @param position 誤りのある、元の式の中の位置(0始まり)
+	 */
+	public FormulaException(String message, int position) {
+		super(message);
+		this._position = position;
+	}
+
+	/**
+	 * 誤りのある、元の式の中の位置を返します。
+	 * @return 誤りのある位置(0始まり)。分からない場合は-1
+	 */
+	public int getPosition() {
+		return _position;
 	}
 
 	/**
@@ -43,6 +67,7 @@ public class FormulaException extends PicosheetException {
 	 */
 	public FormulaException(String message, Throwable cause) {
 		super(message, cause);
+		this._position = -1;
 	}
 
 	/**
@@ -50,6 +75,7 @@ public class FormulaException extends PicosheetException {
 	 */
 	public FormulaException(String message) {
 		super(message);
+		this._position = -1;
 	}
 
 	/**
@@ -57,6 +83,7 @@ public class FormulaException extends PicosheetException {
 	 */
 	public FormulaException(Throwable cause) {
 		super(cause);
+		this._position = -1;
 	}
 
 }

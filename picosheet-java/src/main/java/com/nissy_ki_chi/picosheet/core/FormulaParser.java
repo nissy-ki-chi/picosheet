@@ -19,7 +19,9 @@ package com.nissy_ki_chi.picosheet.core;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -80,6 +82,123 @@ class FormulaParser {
 	private static Pattern _truefalsePattern = Pattern.compile(TRUE_FALSE_PATTERN, Pattern.CASE_INSENSITIVE);
 	private static Pattern _stringPattern = Pattern.compile(STRING_PATTERN);
 	private static Pattern _functionPattern = Pattern.compile(FUNCTION_NAME_PATTERN);
+
+	/**
+	 * tokenize() で使う、字句を1つ切り出すためのパターン。<br>
+	 * split() の _tokens に、パーセント(%)を加えたもの。
+	 * 名前のパターンは長いものから順に試す(別シートのテーブルを、シート名!セル名 より先に試すなど)。
+	 */
+	private static final Pattern _tokenizePattern = Pattern.compile(SPACE_PATTERN + "|" +
+														NUMERIC_PATTERN + "|" +
+														STRING_PATTERN + "|" +
+														COMPARISON_OPERATOR_PATTERN + "|" +
+														ARITHMETIC_OPERATOR_PATTERN + "|" +
+														"%" + "|" +
+														STRING_OPERATOR_PATTERN + "|" +
+														PARENTHESIS_PATTERN + "|" +
+														FUNCTION_NAME_PATTERN + "|" + "," + "|" +
+														SHEETGROUP_NAME_PATTERN + "|" +
+														SHEETTABLE_NAME_WITH_RANGE_PATTERN + "|" +
+														SHEETTABLE_NAME_WITH_ADDRESS_PATTERN + "|" +
+														SHEETTABLE_NAME_PATTERN + "|" +
+														SHEETCELL_NAME_PATTERN + "|" +
+														Group.GROUP_NAME_PATTERN + "|" +
+														Table.TABLE_NAME_WITH_RANGE_PATTERN + "|" +
+														Table.TABLE_NAME_WITH_ADDRESS_PATTERN + "|" +
+														Table.TABLE_NAME_PATTERN + "|" +
+														Cell.CELL_NAME_PATTERN);
+
+	/**
+	 * 記号の文字列から Symbol を引くための表
+	 */
+	private static final Map<String, Token.Operator.Symbol> _symbols = new HashMap<>();
+	static {
+		for (Token.Operator.Symbol symbol : Token.Operator.Symbol.values()) {
+			_symbols.put(symbol.text(), symbol);
+		}
+	}
+
+	/**
+	 * 式の文字列を字句(Token)に分けます。<br>
+	 * split() を元にしたもので、AST を組み立てる解析処理の入力になります。split() との違いは次のとおりです。
+	 * <ul>
+	 * <li>各 Token は、元の式の中の位置(0始まり)を持つ。</li>
+	 * <li>+ と - が単項か二項かは判定しない。解析処理の側で決める。</li>
+	 * <li>関数が登録されているかは確かめない。関数名は書かれたとおりに返す。</li>
+	 * <li>関数名の直後の左括弧は、関数名とは別の Token にする。</li>
+	 * <li>数値は MathContext で丸めない。丸めは計算するときに行う。</li>
+	 * <li>パーセント(%)を記号として扱う。</li>
+	 * </ul>
+	 * 字句の並びとして正しいか(括弧の対応など)は確かめません。空白は捨てます。
+	 * @param formula 式の文字列(先頭の = は含まない)
+	 * @return 字句の並び
+	 * @throws FormulaException 字句として読めない文字がある場合。getPosition() でその位置を得られる
+	 */
+	static List<Token> tokenize(String formula) throws FormulaException {
+		List<Token> tokens = new ArrayList<>();
+		Matcher match = _tokenizePattern.matcher(formula);
+		int position = 0;
+
+		while (position < formula.length()) {
+			match.region(position, formula.length());
+			if (!match.lookingAt()) {
+				throw new FormulaException("Unexpected character '" + formula.charAt(position) + "' at position " + position, position);
+			}
+			String chunk = match.group();
+			Token token = toToken(chunk, position);
+			if (token instanceof Token.Function) {
+				// 関数名の末尾の左括弧は、別の Token にする
+				tokens.add(token);
+				tokens.add(new Token.Operator(Token.Operator.Symbol.LEFT_PARENTHESIS, match.end() - 1));
+			} else if (token != null) {
+				tokens.add(token);
+			}
+			position = match.end();
+		}
+		return tokens;
+	}
+
+	/**
+	 * 切り出した字句の文字列を、種類に応じた Token にします。
+	 * @param chunk 切り出した字句の文字列
+	 * @param position 元の式の中の位置
+	 * @return Token。空白の場合は null
+	 */
+	private static Token toToken(String chunk, int position) {
+		Token.Operator.Symbol symbol = _symbols.get(chunk);
+		if (symbol != null) {
+			return new Token.Operator(symbol, position);
+		}
+		if (_spacePattern.matcher(chunk).matches()) {
+			return null;
+		}
+		if (_numericPattern.matcher(chunk).matches()) {
+			return new Token.Literal(new Value.Numeric(new BigDecimal(chunk)), position);
+		}
+		if (_stringPattern.matcher(chunk).matches()) {
+			return new Token.Literal(new Value.Text(chunk.substring(1, chunk.length() - 1)), position);
+		}
+		// 真偽値は、名前として切り出した文字列の全体が true か false の場合だけ(大文字と小文字は区別しない)
+		if (_truefalsePattern.matcher(chunk).matches()) {
+			return new Token.Literal(new Value.Bool(chunk.equalsIgnoreCase("true")), position);
+		}
+		if (_functionPattern.matcher(chunk).matches()) {
+			return new Token.Function(chunk.substring(0, chunk.length() - 1), position);
+		}
+		if (_cellRefPattern.matcher(chunk).matches()) {
+			// セル参照(アドレス付きのテーブル参照も含む)
+			return new Token.Reference(chunk, position);
+		}
+		if (_groupRefPattern.matcher(chunk).matches()) {
+			return new Token.GroupReference(chunk, position);
+		}
+		if (_tableRefPattern.matcher(chunk).matches()) {
+			// テーブル参照(テーブル全体、もしくは範囲付き)
+			return new Token.TableReference(chunk, position);
+		}
+		// _tokenizePattern に一致した文字列は、上のどれかに当てはまる
+		throw new AssertionError("Unknown token: " + chunk);
+	}
 
 	private enum InvokerOpType {
 		FUNCTION,
