@@ -141,6 +141,8 @@ public sealed interface Value {
 - トークンのパターンを試す順番を見直す（#9、#10）。
 - 戻り値を `Token` の並びにし、元の式の中の位置を持たせる。
 
+（2026-11-22 に追記）この手直しは、`split` を書き換えずに、`split` を元にした別のメソッド `tokenize` として作った。`split` は今の計算処理（RPN）が使っているので、AST に移るまで残す。`tokenize` は数値を `MathContext` で丸めず、`%` も字句として扱う。読めない文字があると、その位置を持つ `FormulaException` を投げる。
+
 **移行のしかた**：作り直している間だけ、今の計算処理と新しい計算処理を並べ、同じ式を両方で計算して結果を比べるテストに使います。結果が違ったところは、「新しい実装の誤り」か「今の不具合を直した結果」のどちらかです。新しい実装がそろったら、古い計算処理は削除します。
 
 ### 3.3 名前（2026-11-15）
@@ -153,6 +155,7 @@ public sealed interface Value {
 | `Token` | 内部 | 字句に分けた結果の1つ（種類・文字列・元の式の中の位置） | `split` が返す `Element[]` の要素 |
 | `Expr` | 内部 | 解析したあとの式（木の節） | `infixToRPN` が返す `Element[]` 全体 |
 | `BinaryOp` / `UnaryOp` | 内部 | 演算子 | `Element.Operator` |
+| `Formula` | 内部（公開は未決定、4.5） | 元の式の文字列と、解析した結果（`Expr` か誤り）の組（3.6） | `Cell` の `_formula` と `_formulaRPN` |
 
 **理由**
 - `Element` は「何かの要素」という意味しかなく、値か式の部品かが名前から分からない。それが今の混乱の一因になっている。
@@ -200,6 +203,44 @@ AST では比較も `Expr.Binary` の1つになり、連続比較のための特
 - `Value`、`Token`、`Expr` は sealed interface なので、`switch` のパターンマッチング（`case Expr.Binary b -> ...`）で種類ごとに処理を書けば、種類の漏れをコンパイラが見つけられる。この機能は Java 21 で正式になり、Java 17 ではプレビューとしてしか使えない。
 - 0.2.0 はまだ公開していないので、対象のバージョンを上げても困る利用者はいない。
 
+### 3.6 セルの式は `Formula` として持つ（2026-11-24）
+セルは、元の式の文字列と、解析した結果を組にした `Formula` を1つだけ持ちます。今の `Cell` の `_formula`（文字列）と `_formulaRPN` は、作り直しが終わったら `Formula` のフィールド1つになります。
+
+```java
+sealed interface Formula {
+    String source();                                         // 利用者が書いた式の文字列（そのまま）
+    record Parsed(String source, Expr expr) implements Formula {}
+    record Invalid(String source, int position, String message) implements Formula {}
+}
+
+// FormulaParser の入口。例外を投げず、読めなかった式は Invalid として返す
+static Formula makeFormula(String formulaString) {
+    try {
+        return new Formula.Parsed(formulaString, parse(tokenize(formulaString)));
+    } catch (FormulaException e) {
+        return new Formula.Invalid(formulaString, e.getPosition(), e.getMessage());
+    }
+}
+```
+
+- `Formula` は、利用者が書いた式の文字列をそのまま持つ。式を表示・保存するときは、この文字列を使い、AST から作り直さない。
+- 読めなかった式も `Formula`（`Invalid`）として持ち、誤りの位置と説明を残す。
+- `makeFormula` の引数は式の文字列だけにする。`tokenize` は数値を丸めず、関数が登録されているかも確かめないので、`MathContext` も `FunctionFactory` も要らない。
+- `tokenize`（字句に分ける）と `parse`（`Token` から `Expr` を組み立てる）は、`FormulaParser` の内部のメソッドとして分け、それぞれ単体でテストする。
+- 関数が登録されているかは `makeFormula` では確かめない。`hoge(1)` も `Parsed` になり、登録されていない関数は、式をセルに設定するときか計算するときに見つける（Excel では計算した結果が `#NAME?` になる）。
+- `Formula` は不変にする。セルの式を変えるときは `Formula` を丸ごと入れ替える。
+
+**理由**
+- **書いたとおりの式を残す**：AST には書き方の情報が残らない。空白は字句に分けるときに捨て、`true` と `True` はどちらも `Value.Bool(true)` に、`3.` と `.5` は数値の値だけになり、括弧は木の形に置き換わる。AST から式を作り直すと、利用者の書いた式と違う形になる。
+- **Cell がなくても式を解析できる**：今は式を解析するのに、`Sheet`、`Book` とのつながりと、`MathContext`、`FunctionFactory` が要る。`Formula` を独立した型にすれば、式をセルに入れる前に誤りとその位置を確かめたり、ブックを作らずに解析処理をテストしたりできる。
+- **読めなかった式を型で表せる**：フィールドで持つと、「AST が null なら誤りの情報がある」といった決まりを `Cell` のあちこちで守る必要がある。sealed interface の `Parsed` と `Invalid` にすれば、どちらの状態かが型で分かり、扱い漏れはコンパイラが見つける。
+- **文字列と解析結果が食い違わない**：今の `Cell.setFormula` は、`_formula` を新しい式に変えたあと、`split` が失敗すると `_formulaRPN` を変えずに戻るので、前の式の RPN が残る。不変の `Formula` を丸ごと入れ替えれば、こうした食い違いは起きない。
+- **式についての処理を1か所に集める**：参照している名前の一覧や、セルの名前を変えたときの式の書き換えは、セルではなく式についての処理なので、`Formula` の側に置ける。今は `_formula` を `Cell`、`PlainCell`、`TableCell` のそれぞれで扱っている。
+
+**注意**
+- セルの名前を変えたときに式を書き換える場合も、AST から作り直さず、`Token` の位置を使って元の文字列の参照の部分だけを差し替える。こうすれば、書き方はそのまま残る。
+- `Formula` を利用者に公開するかは未決定（4.5）。公開する場合、`FormulaParser` はパッケージの内部のクラスなので、入口は `Formula.parse(formulaString)` のように `Formula` の側に置き、中で `FormulaParser` を呼ぶ。
+
 ---
 
 ## 4. 未決定事項
@@ -221,7 +262,7 @@ AST では比較も `Expr.Binary` の1つになり、連続比較のための特
 - 元になったセル、説明の文、関数名、式の中の位置など（#35）。
 
 ### 4.5 `Formula` を公開するか
-- セルが「元の式の文字列」と「解析した `Expr`」を組で持つための型。
+- セルが「元の式の文字列」と「解析した `Expr`」を組で持つための型。作ることと形は 3.6 で決めた（2026-11-24）。残っているのは、公開するかどうか。
 - 公開すれば、式を事前に解析して誤りを確かめたり、AI に誤りの位置を返したりする API の入口になる。その場合も `Expr` は内部のままにし、参照しているセルの一覧や誤りの位置だけを公開する。
 
 ### 4.6 `Value.Number` の名前
