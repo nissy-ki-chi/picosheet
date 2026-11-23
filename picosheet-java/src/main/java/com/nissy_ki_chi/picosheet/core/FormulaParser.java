@@ -200,6 +200,273 @@ class FormulaParser {
 		throw new AssertionError("Unknown token: " + chunk);
 	}
 
+	/**
+	 * 字句の並びから、式の構文木(Expr)を組み立てます。<br>
+	 * 演算子の優先順位は Excel と同じで、Expr.Binary.BinaryOperatorType と Expr.Unary.UnaryOperatorType が持ちます。
+	 * <ul>
+	 * <li>単項の + と - は、他の演算子より先に計算する(-2^2 は 4)。</li>
+	 * <li>% は後置の単項演算子で、単項の + と - の次に計算する。</li>
+	 * <li>二項演算子は、^ も比較演算子も含めて、すべて左から順に計算する(2^3^2 は (2^3)^2、1&lt;x&lt;9 は (1&lt;x)&lt;9)。</li>
+	 * <li>グループとテーブルの参照は、関数の引数にそのまま書く場合だけ使える。</li>
+	 * </ul>
+	 * 関数が登録されているかは確かめません。
+	 * @param tokens tokenize() で分けた字句の並び
+	 * @return 式の構文木の根
+	 * @throws FormulaException 式として正しくない場合。getPosition() で、誤りのある字句の位置を得られる。
+	 *         式が途中で終わっている場合は、最後の字句の位置(字句がなければ0)
+	 */
+	static Expr parse(List<Token> tokens) throws FormulaException {
+		return new ExprBuilder(tokens).build();
+	}
+
+	/**
+	 * 字句の並びから、再帰下降で Expr を組み立てます。二項演算子は優先順位の表を使って組み立てます(precedence climbing)。<br>
+	 * 1つの式を組み立てるごとに作り、使い捨てにします。
+	 */
+	private static final class ExprBuilder {
+
+		private final List<Token> _tokens;
+
+		/**
+		 * 次に読む字句の位置
+		 */
+		private int _index = 0;
+
+		ExprBuilder(List<Token> tokens) {
+			this._tokens = tokens;
+		}
+
+		/**
+		 * 式全体を組み立てます。最後まで読み切れなかった場合は誤りです。
+		 */
+		Expr build() throws FormulaException {
+			Expr expr = parseBinary(0);
+			if (_index < _tokens.size()) {
+				throw unexpected(_tokens.get(_index));
+			}
+			return expr;
+		}
+
+		/**
+		 * 優先順位が minPriority 以上の二項演算子からなる式を組み立てます。<br>
+		 * 右側は優先順位を1つ上げて組み立てるので、同じ優先順位の演算子は左から順に結び付きます。
+		 */
+		private Expr parseBinary(int minPriority) throws FormulaException {
+			Expr left = parsePercent();
+			while (true) {
+				Expr.Binary.BinaryOperatorType type = binaryOperatorOf(peek());
+				if (type == null || type.priority() < minPriority) {
+					return left;
+				}
+				_index++;
+				Expr right = parseBinary(type.priority() + 1);
+				left = new Expr.Binary(type, left, right);
+			}
+		}
+
+		/**
+		 * 後置の % を組み立てます(優先順位5)。
+		 */
+		private Expr parsePercent() throws FormulaException {
+			Expr operand = parsePrefix();
+			while (isNext(Token.Operator.Symbol.PERCENT)) {
+				_index++;
+				operand = new Expr.Unary(Expr.Unary.UnaryOperatorType.PERCENT, operand);
+			}
+			return operand;
+		}
+
+		/**
+		 * 前置の単項の + と - を組み立てます(優先順位6)。<br>
+		 * 値や左括弧が来るはずの位置にある + と - を、単項演算子とします。
+		 */
+		private Expr parsePrefix() throws FormulaException {
+			if (isNext(Token.Operator.Symbol.PLUS)) {
+				_index++;
+				return new Expr.Unary(Expr.Unary.UnaryOperatorType.PLUS, parsePrefix());
+			}
+			if (isNext(Token.Operator.Symbol.MINUS)) {
+				_index++;
+				return new Expr.Unary(Expr.Unary.UnaryOperatorType.NEGATE, parsePrefix());
+			}
+			return parsePrimary();
+		}
+
+		/**
+		 * 値、参照、括弧で囲んだ式、関数の呼び出しを組み立てます。
+		 */
+		private Expr parsePrimary() throws FormulaException {
+			Token token = next();
+			return switch (token) {
+				case Token.Literal literal -> new Expr.Literal(literal.value());
+				case Token.Reference reference -> new Expr.Reference(reference.reference());
+				case Token.GroupReference group -> throw rangeNotAllowed(group);
+				case Token.TableReference table -> throw rangeNotAllowed(table);
+				case Token.Function function -> parseFunction(function);
+				case Token.Operator operator when operator.symbol() == Token.Operator.Symbol.LEFT_PARENTHESIS -> {
+					Expr inner = parseBinary(0);
+					expect(Token.Operator.Symbol.RIGHT_PARENTHESIS);
+					yield inner;
+				}
+				case Token.Operator operator -> throw unexpected(operator);
+			};
+		}
+
+		/**
+		 * 関数の呼び出しを組み立てます。関数名の字句はもう読んであります。
+		 */
+		private Expr parseFunction(Token.Function function) throws FormulaException {
+			expect(Token.Operator.Symbol.LEFT_PARENTHESIS);
+			List<Expr> arguments = new ArrayList<>();
+			if (!isNext(Token.Operator.Symbol.RIGHT_PARENTHESIS)) {
+				do {
+					arguments.add(parseArgument());
+				} while (accept(Token.Operator.Symbol.COMMA));
+			}
+			expect(Token.Operator.Symbol.RIGHT_PARENTHESIS);
+			return new Expr.Function(function.functionName(), arguments);
+		}
+
+		/**
+		 * 関数の引数を1つ組み立てます。<br>
+		 * グループとテーブルの参照は、引数にそのまま書いた場合(直後がカンマか右括弧の場合)だけ使えます。
+		 */
+		private Expr parseArgument() throws FormulaException {
+			Token token = peek();
+			if ((token instanceof Token.GroupReference || token instanceof Token.TableReference) && isArgumentEnd(_index + 1)) {
+				_index++;
+				return switch (token) {
+					case Token.GroupReference group -> new Expr.GroupReference(group.groupReference());
+					case Token.TableReference table -> new Expr.TableReference(table.tableReference());
+					default -> throw new AssertionError(token);
+				};
+			}
+			return parseBinary(0);
+		}
+
+		/**
+		 * 指定した位置の字句が、引数の終わり(カンマか右括弧)かどうかを返します。
+		 */
+		private boolean isArgumentEnd(int index) {
+			if (index >= _tokens.size()) {
+				return false;
+			}
+			return _tokens.get(index) instanceof Token.Operator operator
+					&& (operator.symbol() == Token.Operator.Symbol.COMMA || operator.symbol() == Token.Operator.Symbol.RIGHT_PARENTHESIS);
+		}
+
+		/**
+		 * 次の字句を返します。読む位置は進めません。最後まで読んでいたら null を返します。
+		 */
+		private Token peek() {
+			return _index < _tokens.size() ? _tokens.get(_index) : null;
+		}
+
+		/**
+		 * 次の字句を返し、読む位置を進めます。最後まで読んでいたら誤りです。
+		 */
+		private Token next() throws FormulaException {
+			if (_index >= _tokens.size()) {
+				throw unexpectedEnd();
+			}
+			return _tokens.get(_index++);
+		}
+
+		/**
+		 * 次の字句が指定した記号かどうかを返します。
+		 */
+		private boolean isNext(Token.Operator.Symbol symbol) {
+			return peek() instanceof Token.Operator operator && operator.symbol() == symbol;
+		}
+
+		/**
+		 * 次の字句が指定した記号なら読み進めて true を、そうでなければ false を返します。<br>
+		 * 省略できる字句（引数の間の , など）に使います。違う字句でも誤りにはせず、読む位置も進めません。
+		 * 必ずある字句には {@link #expect(Token.Operator.Symbol)} を使います。
+		 * @param symbol 読みたい記号
+		 * @return 読み進めた場合は true
+		 */
+		private boolean accept(Token.Operator.Symbol symbol) {
+			if (isNext(symbol)) {
+				_index++;
+				return true;
+			}
+			return false;
+		}
+
+		/**
+		 * 次の字句が指定した記号であることを確かめて、読み進めます。<br>
+		 * 必ずある字句（閉じ括弧の ) など）に使います。省略できる字句には {@link #accept(Token.Operator.Symbol)} を使います。
+		 * @param symbol 次にあるはずの記号
+		 * @throws FormulaException 次の字句が指定した記号でない場合（その字句の位置）、
+		 *             または式が途中で終わっている場合（最後の字句の位置）
+		 */
+		private void expect(Token.Operator.Symbol symbol) throws FormulaException {
+			Token token = next();
+			if (!(token instanceof Token.Operator operator && operator.symbol() == symbol)) {
+				throw unexpected(token);
+			}
+		}
+
+		/**
+		 * 字句が二項演算子なら、その種類を返します。そうでなければ null を返します。
+		 */
+		private static Expr.Binary.BinaryOperatorType binaryOperatorOf(Token token) {
+			if (!(token instanceof Token.Operator operator)) {
+				return null;
+			}
+			return switch (operator.symbol()) {
+				case PLUS -> Expr.Binary.BinaryOperatorType.PLUS;
+				case MINUS -> Expr.Binary.BinaryOperatorType.MINUS;
+				case TIMES -> Expr.Binary.BinaryOperatorType.TIMES;
+				case DIVIDE -> Expr.Binary.BinaryOperatorType.DIVIDE;
+				case POWER -> Expr.Binary.BinaryOperatorType.POWER;
+				case CONCATENATE -> Expr.Binary.BinaryOperatorType.CONCATENATE;
+				case LESS_THAN -> Expr.Binary.BinaryOperatorType.LESS_THAN;
+				case LESS_EQUAL -> Expr.Binary.BinaryOperatorType.LESS_EQUAL;
+				case EQUALS -> Expr.Binary.BinaryOperatorType.EQUALS;
+				case NOT_EQUALS -> Expr.Binary.BinaryOperatorType.NOT_EQUALS;
+				case GREATER_EQUAL -> Expr.Binary.BinaryOperatorType.GREATER_EQUAL;
+				case GREATER_THAN -> Expr.Binary.BinaryOperatorType.GREATER_THAN;
+				case PERCENT, COMMA, LEFT_PARENTHESIS, RIGHT_PARENTHESIS -> null;
+			};
+		}
+
+		private static FormulaException unexpected(Token token) {
+			return new FormulaException("Unexpected '" + textOf(token) + "' at position " + token.position(), token.position());
+		}
+
+		private FormulaException unexpectedEnd() {
+			int position = _tokens.isEmpty() ? 0 : _tokens.get(_tokens.size() - 1).position();
+			return new FormulaException("Formula ends unexpectedly", position);
+		}
+
+		private static FormulaException rangeNotAllowed(Token token) {
+			return new FormulaException("'" + textOf(token) + "' at position " + token.position()
+					+ " can only be used as a function argument", token.position());
+		}
+
+		/**
+		 * 誤りの説明に使う、字句の文字列を返します。
+		 */
+		private static String textOf(Token token) {
+			return switch (token) {
+				case Token.Operator operator -> operator.symbol().text();
+				case Token.Function function -> function.functionName();
+				case Token.Reference reference -> reference.reference();
+				case Token.GroupReference group -> group.groupReference();
+				case Token.TableReference table -> table.tableReference();
+				case Token.Literal literal -> switch (literal.value()) {
+					case Value.Numeric numeric -> numeric.value().toPlainString();
+					case Value.Text text -> "\"" + text.value() + "\"";
+					case Value.Bool bool -> bool.value().toString().toUpperCase();
+					case Value.Date date -> date.value().toString();
+					case Value.Empty empty -> "";
+				};
+			};
+		}
+	}
+
 	private enum InvokerOpType {
 		FUNCTION,
 		LEFT_PARENTHESIS,
