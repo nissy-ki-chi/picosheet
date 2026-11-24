@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -115,6 +116,23 @@ class FormulaParser {
 	static {
 		for (Token.Operator.Symbol symbol : Token.Operator.Symbol.values()) {
 			_symbols.put(symbol.text(), symbol);
+		}
+	}
+
+	/**
+	 * 式の文字列を解析して、Formula を作ります。<br>
+	 * 例外は投げず、読めなかった式は、誤りの位置と説明を持つ Formula.Invalid として返します。<br>
+	 * 関数が登録されているかは確かめません(登録されていない関数を使う式も Formula.Parsed になります)。
+	 * @param formulaString 式の文字列(先頭の = は含まない)
+	 * @return 読めた場合は Formula.Parsed、読めなかった場合は Formula.Invalid
+	 * @throws NullPointerException formulaString が null の場合
+	 */
+	static Formula makeFormula(String formulaString) {
+		Objects.requireNonNull(formulaString, "Formula string cannot be null");
+		try {
+			return new Formula.Parsed(formulaString, parse(tokenize(formulaString)));
+		} catch (FormulaException e) {
+			return new Formula.Invalid(formulaString, e.getPosition(), e.getMessage());
 		}
 	}
 
