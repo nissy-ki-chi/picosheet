@@ -30,7 +30,7 @@ import junit.framework.TestCase;
 public class FormulaParserMakeFormulaTest extends TestCase {
 
 	private static Expr num(String number) {
-		return new Expr.Literal(new Value.Numeric(new BigDecimal(number)));
+		return new Expr.Literal(new Value.Numeric(new BigDecimal(number)), 0);
 	}
 
 	/**
@@ -41,7 +41,7 @@ public class FormulaParserMakeFormulaTest extends TestCase {
 		assertTrue(formula instanceof Formula.Parsed);
 		Formula.Parsed parsed = (Formula.Parsed) formula;
 		assertEquals("1+2", parsed.source());
-		assertEquals(new Expr.Binary(BinaryOperatorType.PLUS, num("1"), num("2")), parsed.expr());
+		assertEquals(new Expr.Binary(BinaryOperatorType.PLUS, num("1"), num("2"), 0), ExprShape.of(parsed.expr()));
 	}
 
 	/**
@@ -61,7 +61,7 @@ public class FormulaParserMakeFormulaTest extends TestCase {
 	public void testUnknownFunctionIsParsed() {
 		Formula formula = FormulaParser.makeFormula("hoge(1)");
 		assertTrue(formula instanceof Formula.Parsed);
-		assertEquals(new Expr.Function("hoge", List.of(num("1"))), ((Formula.Parsed) formula).expr());
+		assertEquals(new Expr.Function("hoge", List.of(num("1")), 0), ExprShape.of(((Formula.Parsed) formula).expr()));
 	}
 
 	/**

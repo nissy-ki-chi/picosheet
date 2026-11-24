@@ -270,6 +270,8 @@ class FormulaParser {
 		 * 右側は優先順位を1つ上げて組み立てるので、同じ優先順位の演算子は左から順に結び付きます。
 		 */
 		private Expr parseBinary(int minPriority) throws FormulaException {
+			// 左の被演算子が括弧で始まる場合もあるので、left.position() ではなく先頭の字句の位置を使う
+			int start = _index;
 			Expr left = parsePercent();
 			while (true) {
 				Expr.Binary.BinaryOperatorType type = binaryOperatorOf(peek());
@@ -278,7 +280,7 @@ class FormulaParser {
 				}
 				_index++;
 				Expr right = parseBinary(type.priority() + 1);
-				left = new Expr.Binary(type, left, right);
+				left = new Expr.Binary(type, left, right, positionAt(start));
 			}
 		}
 
@@ -286,10 +288,11 @@ class FormulaParser {
 		 * 後置の % を組み立てます(優先順位5)。
 		 */
 		private Expr parsePercent() throws FormulaException {
+			int start = _index;
 			Expr operand = parsePrefix();
 			while (isNext(Token.Operator.Symbol.PERCENT)) {
 				_index++;
-				operand = new Expr.Unary(Expr.Unary.UnaryOperatorType.PERCENT, operand);
+				operand = new Expr.Unary(Expr.Unary.UnaryOperatorType.PERCENT, operand, positionAt(start));
 			}
 			return operand;
 		}
@@ -300,12 +303,12 @@ class FormulaParser {
 		 */
 		private Expr parsePrefix() throws FormulaException {
 			if (isNext(Token.Operator.Symbol.PLUS)) {
-				_index++;
-				return new Expr.Unary(Expr.Unary.UnaryOperatorType.PLUS, parsePrefix());
+				int position = next().position();
+				return new Expr.Unary(Expr.Unary.UnaryOperatorType.PLUS, parsePrefix(), position);
 			}
 			if (isNext(Token.Operator.Symbol.MINUS)) {
-				_index++;
-				return new Expr.Unary(Expr.Unary.UnaryOperatorType.NEGATE, parsePrefix());
+				int position = next().position();
+				return new Expr.Unary(Expr.Unary.UnaryOperatorType.NEGATE, parsePrefix(), position);
 			}
 			return parsePrimary();
 		}
@@ -316,8 +319,8 @@ class FormulaParser {
 		private Expr parsePrimary() throws FormulaException {
 			Token token = next();
 			return switch (token) {
-				case Token.Literal literal -> new Expr.Literal(literal.value());
-				case Token.Reference reference -> new Expr.Reference(reference.reference());
+				case Token.Literal literal -> new Expr.Literal(literal.value(), literal.position());
+				case Token.Reference reference -> new Expr.Reference(reference.reference(), reference.position());
 				case Token.GroupReference group -> throw rangeNotAllowed(group);
 				case Token.TableReference table -> throw rangeNotAllowed(table);
 				case Token.Function function -> parseFunction(function);
@@ -342,7 +345,7 @@ class FormulaParser {
 				} while (accept(Token.Operator.Symbol.COMMA));
 			}
 			expect(Token.Operator.Symbol.RIGHT_PARENTHESIS);
-			return new Expr.Function(function.functionName(), arguments);
+			return new Expr.Function(function.functionName(), arguments, function.position());
 		}
 
 		/**
@@ -354,8 +357,8 @@ class FormulaParser {
 			if ((token instanceof Token.GroupReference || token instanceof Token.TableReference) && isArgumentEnd(_index + 1)) {
 				_index++;
 				return switch (token) {
-					case Token.GroupReference group -> new Expr.GroupReference(group.groupReference());
-					case Token.TableReference table -> new Expr.TableReference(table.tableReference());
+					case Token.GroupReference group -> new Expr.GroupReference(group.groupReference(), group.position());
+					case Token.TableReference table -> new Expr.TableReference(table.tableReference(), table.position());
 					default -> throw new AssertionError(token);
 				};
 			}
@@ -371,6 +374,13 @@ class FormulaParser {
 			}
 			return _tokens.get(index) instanceof Token.Operator operator
 					&& (operator.symbol() == Token.Operator.Symbol.COMMA || operator.symbol() == Token.Operator.Symbol.RIGHT_PARENTHESIS);
+		}
+
+		/**
+		 * 指定した番号の字句の、元の式の中の位置を返します。部分の木の先頭の位置を求めるのに使います。
+		 */
+		private int positionAt(int index) {
+			return _tokens.get(index).position();
 		}
 
 		/**

@@ -26,48 +26,49 @@ import junit.framework.TestCase;
 
 /**
  * FormulaParser.parse() のテスト。<br>
+ * 組み立てた木の形を確かめる。位置は比べない(位置は FormulaParserPositionTest で確かめる)。<br>
  * FormulaParser はパッケージの内部のクラスなので、同じパッケージに置いている。
  */
 public class FormulaParserParseTest extends TestCase {
 
 	private static Expr parse(String formula) throws FormulaException {
-		return FormulaParser.parse(FormulaParser.tokenize(formula));
+		return ExprShape.of(FormulaParser.parse(FormulaParser.tokenize(formula)));
 	}
 
 	private static Expr num(String number) {
-		return new Expr.Literal(new Value.Numeric(new BigDecimal(number)));
+		return new Expr.Literal(new Value.Numeric(new BigDecimal(number)), 0);
 	}
 
 	private static Expr text(String text) {
-		return new Expr.Literal(new Value.Text(text));
+		return new Expr.Literal(new Value.Text(text), 0);
 	}
 
 	private static Expr bool(boolean b) {
-		return new Expr.Literal(new Value.Bool(b));
+		return new Expr.Literal(new Value.Bool(b), 0);
 	}
 
 	private static Expr ref(String name) {
-		return new Expr.Reference(name);
+		return new Expr.Reference(name, 0);
 	}
 
 	private static Expr group(String name) {
-		return new Expr.GroupReference(name);
+		return new Expr.GroupReference(name, 0);
 	}
 
 	private static Expr table(String name) {
-		return new Expr.TableReference(name);
+		return new Expr.TableReference(name, 0);
 	}
 
 	private static Expr bin(BinaryOperatorType type, Expr left, Expr right) {
-		return new Expr.Binary(type, left, right);
+		return new Expr.Binary(type, left, right, 0);
 	}
 
 	private static Expr unary(UnaryOperatorType type, Expr operand) {
-		return new Expr.Unary(type, operand);
+		return new Expr.Unary(type, operand, 0);
 	}
 
 	private static Expr func(String name, Expr... args) {
-		return new Expr.Function(name, List.of(args));
+		return new Expr.Function(name, List.of(args), 0);
 	}
 
 	/**

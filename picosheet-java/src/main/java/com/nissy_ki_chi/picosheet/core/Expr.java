@@ -21,6 +21,11 @@ import java.util.Objects;
 
 /**
  * 抽象構文木を表す不変(immutable)のオブジェクトです。<br>
+ * どの部分の木も、元の式の中の位置(0始まり)を持ちます。位置は、その部分の木の先頭の字句の位置です。
+ * 括弧は木に残らないので、括弧で始まる部分の木の位置は、その左括弧の位置になります
+ * (例: (1+2)*3 の * の Binary は0、+ の Binary は1)。<br>
+ * 位置は誤りの場所や値の由来を示すためのもので、式の意味には関わりません。
+ * ただし、record の equals() は位置も比べるので、書き方が違えば同じ意味の式でも等しくなりません。
  * 
  * @author yusuke nishikawa
  *
@@ -28,7 +33,13 @@ import java.util.Objects;
 
 public sealed interface Expr {
 
-	record Unary(UnaryOperatorType operatorType, Expr operand) implements Expr {
+	/**
+	 * その部分の木の先頭の字句の、元の式の中の位置(0始まり)を返します。
+	 * @return 元の式の中の位置
+	 */
+	int position();
+
+	record Unary(UnaryOperatorType operatorType, Expr operand, int position) implements Expr {
 		public Unary {
 			Objects.requireNonNull(operatorType, "Operator type cannot be null");
 			Objects.requireNonNull(operand, "Operand cannot be null");
@@ -57,7 +68,7 @@ public sealed interface Expr {
 
 	}
 
-	record Binary(BinaryOperatorType operatorType, Expr leftOperand, Expr rightOperand) implements Expr {
+	record Binary(BinaryOperatorType operatorType, Expr leftOperand, Expr rightOperand, int position) implements Expr {
 		public Binary {
 			Objects.requireNonNull(operatorType, "Operator type cannot be null");
 			Objects.requireNonNull(leftOperand, "Left operand cannot be null");
@@ -138,7 +149,7 @@ public sealed interface Expr {
 
 	}
 
-	record Function(String functionName, List<Expr> arguments) implements Expr {
+	record Function(String functionName, List<Expr> arguments, int position) implements Expr {
 		public Function {
 			Objects.requireNonNull(functionName, "Function name cannot be null");
 			Objects.requireNonNull(arguments, "Arguments list cannot be null");
@@ -146,16 +157,16 @@ public sealed interface Expr {
 		}
 	}
 
-	record Reference(String reference) implements Expr {
+	record Reference(String reference, int position) implements Expr {
 	}
 
-	record GroupReference(String groupReference) implements Expr {
+	record GroupReference(String groupReference, int position) implements Expr {
 	}
 
-	record TableReference(String tableReference) implements Expr {
+	record TableReference(String tableReference, int position) implements Expr {
 	}
 
-	record Literal(Value value) implements Expr {
+	record Literal(Value value, int position) implements Expr {
 	}
 
 }
