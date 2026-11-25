@@ -490,6 +490,8 @@ class FormulaParser {
 					case Value.Bool bool -> bool.value().toString().toUpperCase();
 					case Value.Date date -> date.value().toString();
 					case Value.Empty empty -> "";
+					// 式の中にエラー値は書けないので、字句がエラー値を持つことはない
+					case Value.Error error -> throw new AssertionError("Token cannot hold an error: " + error);
 				};
 			};
 		}

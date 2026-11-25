@@ -67,7 +67,48 @@ public sealed interface Value {
 		}
 	}
 
-	// TODO: エラー型は未実装
-	// record Error(ErrorType value) implements Value {}
+	/**
+	 * エラーを表します。<br>
+	 * 元になったセルや式の中の位置など、種類のほかに持たせる情報は未決定です(DESIGN.md 4.4)。
+	 */
+	record Error(ErrorKind kind) implements Value {
+		public Error {
+			Objects.requireNonNull(kind, "Error kind cannot be null");
+		}
+	}
+
+	/**
+	 * エラーの種類です。循環参照を除き、Excel のエラー値と対応します。
+	 */
+	enum ErrorKind {
+		/**
+		 * 0で割った(Excel の #DIV/0!)
+		 */
+		DIVIDE_BY_ZERO,
+		/**
+		 * 演算子や関数に合わない種類の値を渡した(Excel の #VALUE!)
+		 */
+		WRONG_VALUE,
+		/**
+		 * 参照先が見つからない(Excel の #REF!)
+		 */
+		INVALID_REFERENCE,
+		/**
+		 * 名前が分からない。登録されていない関数など(Excel の #NAME?)
+		 */
+		UNRECOGNIZED_NAME,
+		/**
+		 * 数値として計算できない。0の0乗、負の数の小数乗など(Excel の #NUM!)
+		 */
+		INVALID_NUMBER,
+		/**
+		 * 値がない(Excel の #N/A)
+		 */
+		NOT_AVAILABLE,
+		/**
+		 * 循環参照している。Excel にはない(DESIGN.md 3.8)
+		 */
+		CIRCULAR_REFERENCE
+	}
 }
 
