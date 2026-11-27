@@ -122,7 +122,7 @@ public sealed interface Value {
 
 ```java
 @FunctionalInterface
-public interface Function {            // 名前は今の Function と重なるので、作るときに決める
+public interface SheetFunction {       // 今の Function と java.util.function.Function に重ならない名前にした
     Value apply(List<Argument> args, FunctionContext context);
 }
 
@@ -190,6 +190,7 @@ public interface FunctionContext {
 **エラーの扱い**
 - エラーを受け取ると指定しない関数は、引数（範囲の中も含む）にエラーがあれば呼ばれず、左から見て最初のエラーが結果になる。これで #11 は、関数の作り方に関係なく起きない。
 - `ISERROR`、`COUNT` などのエラーを受け取る関数だけ、登録するときにそう指定する。
+- 見つからない範囲（`#REF!`）は、値1つを受け付ける位置なら、エラーを受け取る関数にエラーの値として渡す。テーブルの範囲・範囲しか受け付けない位置なら、関数を呼ばずに `#REF!` にする（関数は指定した種類の引数だけを受け取る）。
 - `SUMIF`・`COUNTIF` なども、エラーを受け取る関数にする。Excel の `SUMIF` は、範囲の中で条件に合わないエラーを無視する（2026-11-27 に Excel で確かめた。範囲が `11, 22, #DIV/0!` で条件が `"<25"` なら 33、`#DIV/0!, 22, #DIV/0!` なら 22）。条件に合う行の `sum_range` がエラーなら、そのエラーを返す（`range` が `11, 22, #DIV/0!`、`sum_range` が `101, #DIV/0!, 305` なら `#DIV/0!`。同じ日に確かめた）。
 
 **遅延評価の関数**
